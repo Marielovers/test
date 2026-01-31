@@ -230,12 +230,16 @@
         }
         #mobile-bomb-btn:active { background: rgba(255, 0, 0, 0.6); transform: scale(0.95); }
         @media (max-width: 768px) {
+            /* 1. 화면 배치 설정 변경 */
+            body {
+                align-items: flex-start !important; /* 세로 중앙 정렬을 끄고 위쪽(Top) 정렬로 변경 */
+                padding-top: 50px; /* 맨 위에 너무 딱 붙지 않게 약간의 여백(50px) 추가 */
+            }
+
+            /* 2. 게임 화면 크기 설정 */
             #game-container {
-                /* 높이를 화면의 70%로 강제 설정 */
-                height: 70dvh !important;
-        
-                /* 높이가 줄어들면 비율(aspect-ratio)에 맞춰 너비도 알아서 줄어듭니다. */
-                /* 이미 body에 중앙 정렬이 되어 있어서 화면 가운데에 예쁘게 뜹니다. */
+                height: 70dvh !important; /* 높이를 70%로 줄임 */
+                /* 높이가 줄면 비율에 맞춰 너비도 알아서 줄어듬 */
             }
         }
     </style>
