@@ -3,60 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dual Core Shooter : Lethe Final Integrated</title>
+    <title>Dual Core Shooter : Touch Remaster</title>
     <style>
-        /* [수정] body: 화면 중앙 정렬 및 배경색 */
+        /* 1. 배경 및 레이아웃 설정 */
         body { 
             margin: 0; 
-            background-color: #111; /* 배경을 더 어둡게 해서 게임 집중도 향상 */
+            background-color: #000; 
             display: flex; 
             justify-content: center; 
             align-items: center; 
-            height: 100vh; 
+            height: 100dvh; /* 모바일 브라우저 높이 대응 */
+            width: 100vw;
             color: white; 
             font-family: 'Arial', sans-serif; 
             overflow: hidden; 
-            touch-action: none; 
+            touch-action: none; /* 브라우저 기본 터치 동작(스크롤 등) 차단 */
         }
 
-        /* [추가] 게임기 본체: 이 박스가 모든 비율(450:700)을 유지함 */
+        /* 2. 게임기 본체: 비율 유지 및 자동 크기 조절 */
         #game-container {
-            position: relative; /* 내부 요소들의 기준점 */
-            aspect-ratio: 450 / 700; /* 비율 고정 */
-    
-            /* 화면에 꽉 차게 하되 비율 유지 */
+            position: relative;
+            
+            /* [핵심] 450:700 비율 고정 */
+            aspect-ratio: 450 / 700; 
+            
+            /* 높이를 화면에 맞춤 */
             height: 100%; 
             width: auto;
+            
+            /* 너비가 화면을 넘어가면 너비에 맞춤 (가로 모드 등 대응) */
             max-width: 100%;
-            max-height: 100%;
-    
-            background-color: #222; /* 게임 내부 배경 */
-            box-shadow: 0 0 30px rgba(0,0,0,0.8); /* 그림자 효과 */
-            overflow: hidden; /* 튀어나가는 요소 숨김 */
+            
+            background-color: #222; 
+            box-shadow: 0 0 50px rgba(0,0,0,0.8); 
+            overflow: hidden;
         }
 
-        /* [수정] 캔버스: 부모 박스를 가득 채움 */
+        /* 3. 캔버스 */
         canvas { 
             width: 100%; 
             height: 100%; 
             display: block;
+            image-rendering: pixelated; 
             background-color: #87ceeb; 
-            image-rendering: pixelated; /* 도트 선명하게 */
         }
 
-        /* UI 공통 (위치 기준을 부모 박스로 변경) */
+        /* UI 오버레이 설정 */
+        .overlay-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100;
+        }
+
+        /* 인게임 UI바 */
         #ui { 
-            position: absolute; 
-            top: 20px; 
-            left: 0; 
-            width: 100%; 
-            text-align: center; 
-            pointer-events: none; 
-            z-index: 10; 
-            display: none; 
+            position: absolute; top: 20px; left: 0; width: 100%; 
+            text-align: center; pointer-events: none; z-index: 10; display: none; 
         }
 
-        /* 기존 디자인 유지 */
         .bar-container { width: 60%; height: 15px; background-color: #444; margin: 5px auto; border: 2px solid #fff; position: relative; }
         #hp-bar { width: 100%; height: 100%; background-color: #00f0ff; transition: width 0.2s; }
         #xp-bar { width: 0%; height: 100%; background-color: #ffd700; transition: width 0.2s; }
@@ -64,21 +68,6 @@
         #boss-hp-bar { width: 100%; height: 100%; background-color: #ff00ff; transition: width 0.2s; }
         .bar-text { position: absolute; top: 0; left: 0; width: 100%; font-size: 11px; line-height: 15px; color: black; font-weight: bold; }
         .info-text { font-size: 14px; color: #333; margin-top: 5px; font-weight: bold; text-shadow: 1px 1px 0px white;}
-
-        /* 전체화면 오버레이 (게임 박스 안에 갇히도록 설정) */
-        .overlay-screen {
-            position: absolute; 
-            top: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            display: flex; 
-            flex-direction: column; 
-            justify-content: center; 
-            align-items: center; 
-            z-index: 100;
-        }
 
         /* 타이틀 화면 */
         #title-screen { display: flex; }
@@ -89,63 +78,18 @@
 
         /* 로드아웃 화면 */
         #loadout-screen { display: none; }
-        .loadout-container { 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            gap: 20px; 
-            margin-bottom: 20px; 
-            width: 100%;
-        }
-        .selection-slots {
-            display: flex;
-            gap: 20px;
-            margin-bottom: 10px;
-        }
-        .slot {
-            width: 100px;
-            height: 120px;
-            border: 3px dashed #555;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            background: #222;
-            transition: 0.2s;
-        }
-        .slot.active {
-            border-color: #00f0ff; 
-            box-shadow: 0 0 15px rgba(0, 240, 255, 0.3);
-        }
-        .slot.filled {
-            border-style: solid;
-            border-color: white;
-            background: #333;
-        }
+        .loadout-container { display: flex; flex-direction: column; align-items: center; gap: 20px; margin-bottom: 20px; width: 100%; }
+        .selection-slots { display: flex; gap: 20px; margin-bottom: 10px; }
+        .slot { width: 100px; height: 120px; border: 3px dashed #555; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; background: #222; transition: 0.2s; }
+        .slot.active { border-color: #00f0ff; box-shadow: 0 0 15px rgba(0, 240, 255, 0.3); }
+        .slot.filled { border-style: solid; border-color: white; background: #333; }
         .slot-label { font-size: 12px; color: #aaa; margin-bottom: 10px; font-weight:bold; }
         .slot-icon { width: 30px; height: 30px; background: #333; border-radius: 50%; margin-bottom: 5px; }
         .slot-name { font-size: 14px; font-weight: bold; color: white; text-align: center;}
-
-        /* 파츠 그리드 */
-        .part-grid { 
-            display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 10px; 
-            max-height: 300px; /* 높이 조절 */
-            overflow-y: auto; 
-            padding: 10px;
-            background: rgba(0,0,0,0.3);
-            border-radius: 10px;
-            -webkit-overflow-scrolling: touch;
-        }
+        .part-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; max-height: 300px; overflow-y: auto; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 10px; -webkit-overflow-scrolling: touch; }
         .part-grid::-webkit-scrollbar { width: 4px; }
         .part-grid::-webkit-scrollbar-thumb { background: #555; border-radius: 4px; }
-        .mini-card {
-            width: 60px; height: 80px; background: #444; border: 2px solid #777;
-            cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
-            padding: 5px; transition: 0.2s;
-        }
+        .mini-card { width: 60px; height: 80px; background: #444; border: 2px solid #777; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 5px; transition: 0.2s; }
         .mini-card:hover { border-color: white; background: #555; }
         .mini-card.selected { border-color: #ffff00; background: #666; box-shadow: 0 0 10px #ffff00; }
         .mini-card.in-use { opacity: 0.3; border-color: #333; pointer-events: none; }
@@ -156,12 +100,7 @@
         #upgrade-modal { display: none; } 
         .modal-title { font-size: 24px; margin-bottom: 20px; color: #fff; text-shadow: 0 0 10px #fff; text-align: center; }
         .card-container { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center; }
-        .card { 
-            width: 100px; height: 180px; /* 카드 크기 살짝 조정 */
-            background: #333; border: 2px solid #fff; border-radius: 10px; 
-            cursor: pointer; display: flex; flex-direction: column; align-items: center; 
-            padding: 10px; transition: transform 0.2s, background 0.2s; position: relative; 
-        }
+        .card { width: 100px; height: 180px; background: #333; border: 2px solid #fff; border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; padding: 10px; transition: transform 0.2s, background 0.2s; position: relative; }
         .card.disabled { opacity: 0.5; cursor: not-allowed; border-color: #555; transform: none; }
         .highlighted { border: 4px solid #ffff00 !important; box-shadow: 0 0 20px #ffff00 !important; transform: scale(1.05) !important; z-index: 10; background: #444 !important; }
         .card-icon { width: 40px; height: 40px; margin-bottom: 10px; }
@@ -181,79 +120,19 @@
         #btn-replace-cancel { width: 200px; background: #333; margin-top: 10px; }
 
         h1, h3 { color: #333; text-shadow: 1px 1px 2px white; margin: 5px 0;}
-
-        /* 모바일 컨트롤 (게임 컨테이너 안으로 배치) */
-        #mobile-controls {
-            position: absolute; 
-            bottom: 0; 
-            left: 0; 
-            width: 100%; 
-            height: 100%; 
-            pointer-events: none; 
-            z-index: 50; 
-            display: none;
-        }
-
-        /* 모바일/태블릿 환경에서만 컨트롤 표시 (JS가 처리하지만 안전장치) */
-        @media (hover: none) and (pointer: coarse) {
-            #mobile-controls { display: block; }
-        }
-
-        #joystick-zone {
-            position: absolute; bottom: 30px; left: 30px; width: 120px; height: 120px;
-            pointer-events: auto;
-        }
-        #joystick-base {
-            width: 100%; height: 100%;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            border-radius: 50%;
-            position: relative; backdrop-filter: blur(2px);
-        }
-        #joystick-stick {
-            width: 50px; height: 50px;
-            background: rgba(0, 240, 255, 0.5);
-            border-radius: 50%;
-            position: absolute; top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            box-shadow: 0 0 10px #00f0ff; pointer-events: none;
-        }
-        #mobile-bomb-btn {
-            position: absolute; bottom: 40px; right: 30px;
-            width: 80px; height: 80px;
-            background: rgba(255, 0, 0, 0.3);
-            border: 2px solid red; border-radius: 50%;
-            color: white; font-size: 30px;
-            display: flex; justify-content: center; align-items: center;
-            cursor: pointer; pointer-events: auto;
-            backdrop-filter: blur(2px); user-select: none;
-        }
-        #mobile-bomb-btn:active { background: rgba(255, 0, 0, 0.6); transform: scale(0.95); }
-        @media (max-width: 768px) {
-            /* 1. 화면 배치 설정 변경 */
-            body {
-                align-items: flex-start !important; /* 세로 중앙 정렬을 끄고 위쪽(Top) 정렬로 변경 */
-                padding-top: 50px; /* 맨 위에 너무 딱 붙지 않게 약간의 여백(50px) 추가 */
-            }
-
-            /* 2. 게임 화면 크기 설정 */
-            #game-container {
-                height: 50% !important; /* 높이를 70%로 줄임 */
-                /* 높이가 줄면 비율에 맞춰 너비도 알아서 줄어듬 */
-            }
-        }
     </style>
 </head>
 <body>
     <div id="game-container">
         <div id="title-screen" class="overlay-screen">
             <div class="main-title">DUAL CORE<br>STRIKER</div>
+            <p style="color:#aaa; margin-top:-20px; margin-bottom:30px; font-size:14px;">Touch & Drag to Move / Double Tap to Bomb</p>
             <button class="start-btn" onclick="goToLoadout()">GAME START</button>
         </div>
 
         <div id="loadout-screen" class="overlay-screen">
             <h2 style="color:white; margin-bottom:20px;">BUILD YOUR SHIP</h2>
-    
+            
             <div class="selection-slots">
                 <div id="slot-left" class="slot active" onclick="setSelectionTarget('left')">
                     <div class="slot-label">LEFT WING</div>
@@ -292,19 +171,12 @@
                 <span class="bar-text" id="boss-hp-text">WARNING: BOSS</span>
             </div>
             <h3 id="scoreBoard">Score: 0</h3>
-            <p class="info-text" id="bombText">💣 BOMB: 3 (Key: Z)</p>
+            <p class="info-text" id="bombText">💣 BOMB: 3 (Double Tap)</p>
         </div>
-        <div id="mobile-controls">
-            <div id="joystick-zone">
-                <div id="joystick-base">
-                    <div id="joystick-stick"></div>
-                </div>
-            </div>
-            <div id="mobile-bomb-btn">💣</div>
-        </div>
+
         <div id="upgrade-modal" class="overlay-screen">
             <div id="select-ui" style="display:flex; flex-direction:column; align-items:center;">
-                <div class="modal-title">LEVEL UP! (이동: 방향키 / 선택: Z)</div>
+                <div class="modal-title">LEVEL UP! (터치하여 선택)</div>
                 <div class="card-container" id="card-list"></div>
                 <div id="fixed-upgrade-container">
                     <button class="fixed-btn" id="btn-heal" onclick="selectFixedUpgrade('heal')">❤️ HP 회복 (+20)</button>
@@ -312,7 +184,7 @@
                 </div>
             </div>
             <div id="replace-ui">
-                <div class="modal-title">교체할 위치 선택 (방향키 / Z)</div>
+                <div class="modal-title">교체할 위치 선택</div>
                 <div style="font-size:14px; color:#aaa; margin-bottom:20px;">*교체 시 기존 파츠 레벨 유지</div>
                 <div style="display:flex; gap:20px;">
                     <button class="replace-btn" id="btn-replace-left">왼쪽 (LEFT)</button>
@@ -398,11 +270,11 @@
         IfritOrbs: [], IfritRotation: 0, elenaDrones: [],
         leftLaser: { active: false, timer: 0 }, rightLaser: { active: false, timer: 0 }
     };
-    const joystick = {
-        active: false,
-        x: 0, y: 0, // -1 ~ 1 사이 값
-        originX: 0, originY: 0
-    };
+
+    // [신규] 터치 컨트롤 관련 변수
+    let lastTouchX = null;
+    let lastTouchY = null;
+    let lastTapTime = 0;
 
     let boss = null; 
     let bullets = [];
@@ -419,84 +291,65 @@
     const keys = { ArrowUp:false, ArrowDown:false, ArrowLeft:false, ArrowRight:false, KeyZ: false };
     
     function initGame() {
+        // 키보드 이벤트 (PC용)
         document.addEventListener('keydown', e => { 
             if(keys.hasOwnProperty(e.code)) keys[e.code]=true; 
             if (gameState === "playing") { if (e.code === 'KeyZ' && !e.repeat) useBomb(); }
             if (gameState === "paused") { handleUpgradeKey(e.code); }
         });
         document.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.code)) keys[e.code]=false; });
-        // [추가할 코드 시작] --------------------------
-        // 터치가 지원되는 기기인지 확인
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-        // 터치 기기라면 모바일 컨트롤 패널을 강제로 표시
-        if (isTouchDevice) {
-            document.getElementById('mobile-controls').style.display = 'block';
-        }
-        // [추가] 모바일 조이스틱 로직
-        const joystickZone = document.getElementById('joystick-zone');
-        const stick = document.getElementById('joystick-stick');
-        const bombBtn = document.getElementById('mobile-bomb-btn');
-        const maxDist = 35; // 스틱 이동 반경
+        // [핵심 로직] 터치 이벤트 등록 (조이스틱 제거, 화면 드래그 방식 적용)
+        const gameContainer = document.getElementById('game-container');
 
-        // 조이스틱 터치 시작
-        joystickZone.addEventListener('touchstart', (e) => {
-            e.preventDefault();
+        gameContainer.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // 스크롤 방지
             const touch = e.changedTouches[0];
-            const rect = joystickZone.getBoundingClientRect();
-            joystick.originX = rect.left + rect.width / 2;
-            joystick.originY = rect.top + rect.height / 2;
-            joystick.active = true;
-            updateJoystick(touch.clientX, touch.clientY, stick, maxDist);
+            lastTouchX = touch.clientX;
+            lastTouchY = touch.clientY;
+
+            // 더블 탭 폭탄 감지
+            const currentTime = Date.now();
+            if (currentTime - lastTapTime < 300) { // 300ms 이내 두 번 탭
+                if (gameState === "playing") useBomb();
+            }
+            lastTapTime = currentTime;
+
         }, {passive: false});
 
-        // 조이스틱 드래그
-        joystickZone.addEventListener('touchmove', (e) => {
-            if (!joystick.active) return;
+        gameContainer.addEventListener('touchmove', (e) => {
             e.preventDefault();
+            if (gameState !== "playing") return;
+
             const touch = e.changedTouches[0];
-            updateJoystick(touch.clientX, touch.clientY, stick, maxDist);
+            const dx = touch.clientX - lastTouchX;
+            const dy = touch.clientY - lastTouchY;
+
+            // 캔버스와 실제 표시 크기 간의 비율 보정
+            // 화면 크기가 변해도 1:1 드래그 감각을 유지하기 위함
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            // 기체 이동 적용 (드래그한 만큼 즉시 이동)
+            player.x += dx * scaleX;
+            player.y += dy * scaleY;
+
+            // 화면 밖 제한
+            if (player.x < 0) player.x = 0;
+            if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+            if (player.y < 0) player.y = 0;
+            if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
+
+            lastTouchX = touch.clientX;
+            lastTouchY = touch.clientY;
         }, {passive: false});
 
-        // 조이스틱 터치 끝
-        const endJoystick = (e) => {
-            e.preventDefault();
-            joystick.active = false;
-            joystick.x = 0; joystick.y = 0;
-            stick.style.transform = `translate(-50%, -50%)`;
-        };
-        joystickZone.addEventListener('touchend', endJoystick);
-        joystickZone.addEventListener('touchcancel', endJoystick);
-
-        // 폭탄 버튼 터치
-        bombBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            useBomb();
+        gameContainer.addEventListener('touchend', (e) => {
+             e.preventDefault();
+             lastTouchX = null;
+             lastTouchY = null;
         });
-        
-        // 업그레이드 화면 터치 지원 (모바일 편의성)
-        const selectUiDiv = document.getElementById('select-ui');
-        selectUiDiv.addEventListener('touchstart', (e) => {
-             // 간단하게 터치 시 첫번째 항목 선택 시뮬레이션 (혹은 탭한 곳 좌표 계산 필요하지만 생략)
-             // 모바일에서는 화면의 버튼을 직접 누르게 되므로 기존 onclick 이벤트로 처리됩니다.
-        });
-    }
-
-    // [추가] 조이스틱 계산 함수
-    function updateJoystick(clientX, clientY, stickElement, maxDist) {
-        let dx = clientX - joystick.originX;
-        let dy = clientY - joystick.originY;
-        let distance = Math.hypot(dx, dy);
-
-        if (distance > maxDist) {
-            const angle = Math.atan2(dy, dx);
-            dx = Math.cos(angle) * maxDist;
-            dy = Math.sin(angle) * maxDist;
-        }
-
-        stickElement.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`;
-        joystick.x = dx / maxDist;
-        joystick.y = dy / maxDist;
     }
 
     // 현재 어느 쪽을 선택 중인지 추적하는 변수 ('left' 또는 'right')
@@ -514,16 +367,13 @@
         renderLoadoutUI();
     }
 
-    // 선택할 대상(왼쪽/오른쪽)을 변경하는 함수
     function setSelectionTarget(side) {
         currentSelectionTarget = side;
         
-        // 슬롯 스타일 업데이트 (테두리 하이라이트)
         document.getElementById('slot-left').classList.remove('active');
         document.getElementById('slot-right').classList.remove('active');
         document.getElementById(`slot-${side}`).classList.add('active');
 
-        // 안내 문구 업데이트
         const guide = document.getElementById('selection-guide');
         guide.innerText = side === 'left' ? "◀ Choose LEFT Part" : "Choose RIGHT Part ▶";
         guide.style.color = side === 'left' ? "#00f0ff" : "#ff00ff";
@@ -534,22 +384,17 @@
         const grid = document.getElementById('unified-part-grid');
         grid.innerHTML = '';
 
-        // 통합된 그리드 생성
         Object.keys(PARTS_INFO).forEach(key => {
             let info = PARTS_INFO[key];
             let div = document.createElement('div');
             div.className = 'mini-card';
-            // [핵심 로직 추가] 중복 선택 방지
-            // 현재 왼쪽을 고르는 중인데, 이 파츠가 이미 오른쪽에 있다면? -> 비활성화
             if (currentSelectionTarget === 'left' && selectedLoadoutRight === key) {
                 div.classList.add('in-use');
             }
-            // 현재 오른쪽을 고르는 중인데, 이 파츠가 이미 왼쪽에 있다면? -> 비활성화
             else if (currentSelectionTarget === 'right' && selectedLoadoutLeft === key) {
                 div.classList.add('in-use');
             }
 
-            // 현재 선택된 파츠 표시 (시각적 효과)
             if (currentSelectionTarget === 'left' && selectedLoadoutLeft === key) {
                 div.classList.add('selected');
             }
@@ -557,7 +402,7 @@
                 div.classList.add('selected');
             }
 
-            div.onclick = () => selectPart(key); // 클릭 시 선택 함수 호출
+            div.onclick = () => selectPart(key); 
             div.innerHTML = `
                 <div class="mini-icon" style="background:${info.color}; border-radius:50%;"></div>
                 <div class="mini-name">${info.name}</div>
@@ -565,28 +410,24 @@
             grid.appendChild(div);
         });
 
-        updateSlotVisuals(); // 상단 슬롯 UI 갱신
-        checkStartButton();  // 시작 버튼 활성화 여부 체크
+        updateSlotVisuals(); 
+        checkStartButton(); 
     }
 
-    // 파츠를 클릭했을 때 실행되는 함수
     function selectPart(key) {
         if (currentSelectionTarget === 'left') {
             selectedLoadoutLeft = key;
-            // 왼쪽 선택 후 자동으로 오른쪽 선택으로 넘어감
             if (selectedLoadoutRight === null) {
                 setSelectionTarget('right');
             }
         } else {
             selectedLoadoutRight = key;
-            // 오른쪽 선택 후에는 시작 버튼 쪽으로 시선 유도 (별도 액션 없음)
         }
         updateSlotVisuals();
         checkStartButton();
         renderLoadoutUI();
     }
 
-    // 상단 슬롯(네모 박스)의 아이콘과 이름을 갱신
     function updateSlotVisuals() {
         updateSingleSlot('left', selectedLoadoutLeft);
         updateSingleSlot('right', selectedLoadoutRight);
@@ -631,37 +472,32 @@
         loadoutScreen.style.display = "none";
         gameUI.style.display = "block";
 
-        //업그레이드 레벨
-        player.leftPart = { id: selectedLoadoutLeft, level: 5 };
-        player.rightPart = { id: selectedLoadoutRight, level: 5 };
+        player.leftPart = { id: selectedLoadoutLeft, level: 1 };
+        player.rightPart = { id: selectedLoadoutRight, level: 1 };
         
-        // Reset States
         score = 0; frame = 0; player.hp = 100; player.bombs = 3; player.level = 1; player.currentExp = 0; player.maxExp = 50;
-        player.elenaDrones = []; player.IfritOrbs = []; player.barieDrones = []; // [추가] Barie 드론 배열 초기화
+        player.elenaDrones = []; player.IfritOrbs = []; player.barieDrones = []; 
         player.naiaDrones = []; player.barieNaiaDrones = []; player.naiaRotation = 0;
         player.naiaTimer = 0;  player.naiaCurrentCount = 2; player.silphirTimer = 0; player.nerOrbs = [];
 
-        // [수정] 레이저 상태에 angle 속성 추가 (-Math.PI / 2는 12시 방향)
         player.leftLaser = {active: false, timer: 0, angle: -Math.PI / 2}; 
         player.rightLaser = {active: false, timer: 0, angle: -Math.PI / 2};
 
-        // [추가됨] Gabia 보호막 관련 상태 초기화
         player.gabiaShield = 0;
         player.gabiaMaxShield = 0;
-        player.gabiaState = 'active'; // 'active' (작동중), 'broken' (깨짐/복구중)
-        player.gabiaHitTimer = 0; // 피격 후 회복 대기 타이머 (3초)
+        player.gabiaState = 'active'; 
+        player.gabiaHitTimer = 0; 
 
-        // 반박자 딜레이 적용 6프레임
         player.leftCooldown = 0;
         player.rightCooldown =6;
 
-        player.totalHitCount = 0; // 총 피격 횟수
-        player.suroTimer = 0;     // Diana 시너지용 타이머
+        player.totalHitCount = 0; 
+        player.suroTimer = 0;     
 
         enemies = []; bullets = []; enemyBullets = []; expOrbs = []; particles = []; boss = null;
         bossCooldown = 0; bossMaxHp = 100;
         updatePlayerStats();
-        // [수정됨] 시작 시 Gabia 보호막이 있다면 즉시 100% 충전
+        
         if (player.gabiaMaxShield > 0) {
             player.gabiaShield = player.gabiaMaxShield;
         }
@@ -673,10 +509,8 @@
         animate();
     }
 
-    // [입력 처리 수정]
     function handleUpgradeKey(code) {
         if (selectUi.style.display !== 'none') {
-            // 업그레이드 선택 화면
             if (code === 'ArrowRight') {
                 if(upgradeSelectedIndex < 2) upgradeSelectedIndex++;
                 else if(upgradeSelectedIndex === 3) upgradeSelectedIndex = 4;
@@ -696,7 +530,6 @@
             if (code === 'KeyZ') confirmSelection();
             updateUpgradeVisuals();
         } else {
-            // 교체 화면 (Replace UI)
             if (code === 'ArrowLeft') {
                 if(replaceSelection === 'right') replaceSelection = 'left';
             }
@@ -714,7 +547,6 @@
                 if (replaceSelection === 'cancel') cancelReplace();
                 else replacePart(replaceSelection);
             }
-            // ESC backup
             if (code === 'Escape') cancelReplace();
             
             updateReplaceVisuals();
@@ -760,19 +592,14 @@
     }
 
     function animate() {
-        // 1. 다음 프레임 요청을 먼저 걸어둡니다 (모니터 주사율에 맞춰 계속 호출됨)
         requestAnimationFrame(animate);
 
-        // 2. 현재 시간 확인
         now = Date.now();
         elapsed = now - then;
 
-        // 3. 약속된 시간(1/60초)보다 조금이라도 더 지났을 때만 로직 실행
         if (elapsed > fpsInterval) {
-            // 시간 보정 (다음 프레임 계산을 위해)
             then = now - (elapsed % fpsInterval);
 
-            // --- [여기서부터 기존 게임 로직 시작] ---
             if (gameState !== "playing") return;
 
             if (frame % 60 === 0) {
@@ -786,7 +613,6 @@
                 }
             }
 
-            // Silphir 타이머
             let hasSilphir = (player.leftPart.id === 'silphir' || player.rightPart.id === 'silphir' ||
                             (player.leftPart.id === 'barie' && player.rightPart.id === 'silphir') ||
                             (player.rightPart.id === 'barie' && player.leftPart.id === 'silphir'));
@@ -796,7 +622,6 @@
                 else { player.silphirTimer = 0; }
             }
 
-            // Suro & Diana 시너지
             let hasSuro = (player.leftPart.id === 'suro' || player.rightPart.id === 'suro');
             let hasDiana = (player.leftPart.id === 'diana' || player.rightPart.id === 'diana');
 
@@ -847,7 +672,6 @@
             drawPlayer();
             drawElenaDrones();
             drawNaiaDrones();
-            // --- [기존 게임 로직 끝] ---
         }
     }
 
@@ -855,106 +679,83 @@
         processPartAction(player.leftPart, 'left'); 
         processPartAction(player.rightPart, 'right');
         
-        // --- [수정 시작] Ifrit & amelia 상호작용 로직 ---
         player.IfritRotation += 0.075; 
         const count = player.IfritOrbs.length;
 
         if (count > 0) {
-            // 1. amelia 레벨 계산 (감지 범위 설정을 위해)
             let ameliaLevel = 0;
             if (player.leftPart.id === 'amelia ') ameliaLevel += player.leftPart.level;
             if (player.rightPart.id === 'amelia ') ameliaLevel += player.rightPart.level;
 
-            // 2. 감지 거리 설정: 기본 100 + 레벨당 30씩 증가
             const detectionRange = 200 + (ameliaLevel * 50);
 
-            // 유도 대상 목록 (일반 적 + 보스)
             let targets = [...enemies];
             if (boss) targets.push(boss);
 
-            // 역순으로 순회 (배열에서 제거될 가능성을 대비해 안전하게 처리)
             for (let i = player.IfritOrbs.length - 1; i >= 0; i--) {
                 let orb = player.IfritOrbs[i];
 
-                // A. 이미 유도 모드(homing)인 경우: 독자적으로 비행
                 if (orb.homing) {
                     orb.x += orb.vx;
                     orb.y += orb.vy;
 
-                    // 화면 밖으로 나가면 삭제 (메모리 관리)
                     if (orb.x < -50 || orb.x > canvas.width + 50 || orb.y < -50 || orb.y > canvas.height + 50) {
                         player.IfritOrbs.splice(i, 1);
                     }
-                    continue; // 다음 오브로 넘어감
+                    continue; 
                 }
 
-                // B. 대기 모드(회전 중): 플레이어 주변 위치 계산
                 let angleOffset = (Math.PI * 2 / count) * i;
                 let currentAngle = player.IfritRotation + angleOffset;
 
                 let orbitRadius = (orb.source === 'barie') ? 80 : 60;
                 
-                // 원래 있어야 할 회전 위치
                 let orbitX = (player.x + player.width/2) + Math.cos(currentAngle) * orbitRadius;
                 let orbitY = (player.y + player.height/2) + Math.sin(currentAngle) * orbitRadius;
 
-                // 적이 존재할 경우 거리 체크
                 let launched = false;
                 if (targets.length > 0) {
                     let closest = null;
                     let minDist = Infinity;
 
-                    // 가장 가까운 적 찾기
                     targets.forEach(t => {
                         let dist = Math.hypot((t.x + t.width/2) - orbitX, (t.y + t.height/2) - orbitY);
                         if (dist < minDist) { minDist = dist; closest = t; }
                     });
 
-                    // 감지 거리 안에 적이 들어왔다면 발사
                     if (closest && minDist <= detectionRange) {
-                        orb.homing = true; // 상태 변경
+                        orb.homing = true; 
                         
-                        // 적을 향한 발사 각도 및 속도 계산
                         let angle = Math.atan2((closest.y + closest.height/2) - orbitY, (closest.x + closest.width/2) - orbitX);
-                        let speed = 12; // 발사 속도
+                        let speed = 12; 
                         
                         orb.vx = Math.cos(angle) * speed;
                         orb.vy = Math.sin(angle) * speed;
                         
-                        // 현재 위치에서 발사 시작
                         orb.x = orbitX;
                         orb.y = orbitY;
                         launched = true;
                     }
                 }
 
-                // 발사되지 않았다면 계속 플레이어 주변 회전
                 if (!launched) {
                     orb.x = orbitX;
                     orb.y = orbitY;
                 }
             }
         }
-        // --- [수정 끝] ---
     }
 
     function processPartAction(part, side) {
-        // [Barie 로직 구현]
-        // 실제로 로직을 수행할 파츠 정보(runPart)를 결정합니다.
         let runPart = part;
-        // 파트너 파츠 찾기
         let partner = (side === 'left') ? player.rightPart : player.leftPart;
 
         if (part.id === 'barie') {
-            // [핵심 변경] 파트너가 Lethe라면 Barie는 공격을 하지 않고 서포트 모드로 전환 (Lethe 로직에서 처리)
             if (partner.id === 'lethe') return;
-            // 가상의 파츠 생성: ID는 파트너 것, 레벨은 (파트너 레벨 + Barie 레벨) 합산
             runPart = { id: partner.id, level: part.level };
         }
-        // Elena는 active shot이 없으므로 리턴 (Elena 본체든, Barie가 Elena를 베꼈든)
         if(runPart.id === 'elena') return;
 
-        // 아래부터는 'part' 대신 'runPart' 변수를 사용하여 공격 로직을 수행합니다.
         let hasLeets = (player.leftPart.id === 'leets' || player.rightPart.id === 'leets');
         let haleyLevel = 0;
         if(player.leftPart.id === 'haley') haleyLevel = Math.max(haleyLevel, player.leftPart.level);
@@ -963,7 +764,6 @@
         let isBerserk = hasLeets && player.invincible;
         let isOffmask = (player.leftPart.id === 'rim' || player.rightPart.id === 'rim') && player.invincible;
 
-        // [Lethe Logic] runPart 사용
         if (runPart.id === 'lethe') {
             let laser = (side === 'left') ? player.leftLaser : player.rightLaser;
             let cdKey = side + 'Cooldown';
@@ -994,7 +794,6 @@
 
                 laser.acc += Math.max(1, 1+currentSpeedMult);
                 
-                // amelia 오토 에임
                 if (ameliaLevel > 0) {
                     let closest = null;
                     let minDist = Infinity;
@@ -1030,7 +829,6 @@
                 if (laser.acc >= 6) {
                     laser.acc -= 6;
                     
-                    // 데미지 계산 시 runPart.level 사용 (합산된 레벨)
                     let baseW = 2 + (runPart.level - 1) * 0.5; 
                     let lw = isBoosted ? baseW * 1.5 : baseW;
                     let damageMultiplier = 1.0;
@@ -1097,15 +895,12 @@
             }
         }
 
-        // 일반 쿨다운 로직 (Barie 슬롯의 쿨다운을 사용)
         let cdKey = side + 'Cooldown'; if (player[cdKey] > 0) player[cdKey]--;
         
         if (player[cdKey] <= 0) {
             let baseCd = 0;
-            // 발사 위치는 현재 Barie가 장착된 side를 따름
             let bx = side === 'left' ? player.x + 10 : player.x + player.width - 10;
             
-            // 여기서부터 part 대신 runPart를 사용
             if (runPart.id === 'tig') {
                 baseCd = Math.floor(6 / (1 + (runPart.level - 1) * 0.25)); 
                 let x1 = side === 'left' ? player.x + 5 : player.x + 30; let x2 = side === 'left' ? player.x + 20 : player.x + 45;
@@ -1123,9 +918,9 @@
                     if (player.leftPart.id === 'leets') damageMultiplier += 0.20 + (player.leftPart.level - 1) * 0.2;
                     if (player.rightPart.id === 'leets') damageMultiplier += 0.20 + (player.rightPart.level - 1) * 0.2;
                     if (isBerserk) damageAdd = 1 ;
-                    let orbColor = '#333'; // 기본 Ifrit 색상 (검은색)
+                    let orbColor = '#333'; 
                     if (part.id === 'barie') {
-                    orbColor = '#d000ff'; // Barie 복제 구체 색상 (밝은 보라색, 드론과 깔맞춤)
+                    orbColor = '#d000ff'; 
                     }
                     player.IfritOrbs.push({ w:10, h:10, color: orbColor, damage: baseDmg * damageMultiplier * getSilphirMultiplier() + damageAdd, x:0, y:0, source: currentSource}); 
                     baseCd = 20; 
@@ -1139,7 +934,6 @@
             else if (runPart.id === 'amelia') { spawnBullet(bx, player.y, 0, -20, 8, 8, 'grey', 1, 'circle'); baseCd = 12; }
             else if (runPart.id === 'silphir') { spawnBullet(bx, player.y, 0, -20, 8, 8, 'blue', 1, 'circle'); baseCd = 12; }
             else if (runPart.id === 'barie') { 
-                // 복사했는데 또 Barie인 경우(일어날 수 없음) 처리, 기존 폭발탄 유지
                 spawnBullet(bx, player.y, 0, -20, 6, 8, 'purple', 1, 'circle'); baseCd = 12; 
             }
             else if (runPart.id === 'shasha') {
@@ -1166,14 +960,13 @@
             }
             else if (runPart.id === 'Belita') {
                 let hpRatio = player.hp / 100;
-                let baseDmg = Math.max(1, 3 * (hpRatio * hpRatio) * (1+(runPart.level - 1) * 0.25));   
+                let baseDmg = Math.max(1, 3 * (hpRatio * hpRatio) * (1+(runPart.level - 1) * 0.25));    
                 let bulletSize = Math.max(3,  8 * hpRatio* (1+(runPart.level - 1) * 0.25));
                 spawnBullet(bx, player.y, 0, -18, bulletSize, bulletSize, 'red', baseDmg, 'circle');  
                 baseCd = 12; 
             }
             else if (runPart.id === 'kidian') {
                 let levelBonus = runPart.level * player.level * 0.01;
-                // [추가됨] 시너지 로직: 파트너가 Pira라면 Pira의 레벨만큼 기본 데미지 증가
                 let piraBonus = 1;
                 if (partner.id === 'pira') {
                     piraBonus = 1 + partner.level*0.3; 
@@ -1202,25 +995,20 @@
                 let bLeft = spawnBullet(bx - 10, player.y, -0.5, speedY, 6, 10, 'black', finalDmg);
                 bLeft.trajectory = 'sine'; bLeft.timer = 10; bLeft.sidePhase = 1; 
                 let bRight = spawnBullet(bx + 10, player.y, 0.5, speedY, 6, 10, 'black', finalDmg);
-                bRight.trajectory = 'sine'; bRight.timer = 10; bRight.sidePhase = -1;      
+                bRight.trajectory = 'sine'; bRight.timer = 10; bRight.sidePhase = -1;       
                 baseCd = 12; 
             }
             else if (runPart.id === 'erpin') {
-                // 1. 시너지 파츠(Ner) 확인
-                // 현재 파츠의 파트너가 Ner인지 확인 (Barie가 복제한 경우도 partner 변수가 처리해줌)
                 let hasNer = (partner.id === 'ner');
 
-                // 2. 땡땡이(회복) 확률 계산
-                let lazyChance = 0.2; // 기본 20%
-                if (hasNer) lazyChance = 0.4; // Ner가 있으면 0%
+                let lazyChance = 0.2; 
+                if (hasNer) lazyChance = 0.4; 
 
-                // 3. 로직 실행
                 if (Math.random() < lazyChance) {
-                    // [농땡이 모드] 공격 안 함 + HP 1 회복
                     if (hasNer && lazyChance < 0.2) {
                         if (hasNer && lazyChance < 0.002) {
                             player.bombs++;
-                            createParticles(bx, player.y, '#00ff00'); // 초록색 파티클
+                            createParticles(bx, player.y, '#00ff00'); 
                             console.log("Erpin found a marie"); 
                             updateUI();
                         }
@@ -1228,21 +1016,13 @@
                     player.hp = Math.min(player.maxHp, player.hp + 1);
                     }
         
-                    // 회복 이펙트 (초록색 텍스트나 파티클)
                     createParticles(bx, player.y, '#00ff00');
-                    // (선택) 로그 출력
-                    console.log("Erpin is slacking off...");
-        
-                    updateUI(); // 체력 갱신
+                    updateUI(); 
                 } else {
-                    // [공격 모드] 완전 무작위 난사 (Chaos Shot)
                     let count = 8 + (runPart.level - 1) * 2;
                     
                     for (let i = 0; i < count; i++) {
-                        // [각도]: 0 ~ 360도 (2PI) 사이의 완전 무작위 각도
                         let angle = (Math.random()-0.5- Math.PI) / 2; 
-                        
-                        // 속도도 약간의 차이를 주어 더 혼란스럽게 (10 ~ 15 사이)
                         let speed = 10 + Math.random() * 10;
 
                         let vx = Math.cos(angle) * speed;
@@ -1252,32 +1032,27 @@
                     }
                 }
     
-                baseCd = 20; // 20프레임마다 행동
+                baseCd = 20; 
             }
 
             else if (runPart.id === 'ner') {
-                // 1. 시너지 파츠(Erpin) 확인
                 let hasErpin = (partner.id === 'erpin');
     
-                // 2. 배신 확률 계산 (기본 20%, Erpin 있으면 0%)
                 let traitorChance = 0.2;
                 if (hasErpin) traitorChance = 0;
 
-                // 3. 배신 여부 결정
                 let isTraitor = (Math.random() < traitorChance);
 
-                // 4. 구체 생성하여 배열에 추가
                 player.nerOrbs.push({
                     x: bx,
                     y: player.y,
-                    vx: (Math.random() - 0.5) * 2, // 약간 좌우로도 흔들리며 날아감
-                    vy: -5, // 위로 날아가는 속도
+                    vx: (Math.random() - 0.5) * 2, 
+                    vy: -5, 
                     width: 20, 
                     height: 20,
                     isEnemy: isTraitor, 
                     timer: 0,
                     level: runPart.level,
-                    // [수정됨] 랜덤 폭발 시간 설정 (30 ~ 90 프레임 사이, 약 0.5초 ~ 1.5초)
                     explodeTime: 60 + Math.random() * 60 
                 });
 
@@ -1294,36 +1069,29 @@
     }
     function updateElenaDrones() {
 
-        // 1. 드론 개수 목표치 계산
         let elenaTargetCount = 0;
         let barieTargetCount = 0;
 
-        // Elena 파츠 체크
         if (player.leftPart.id === 'elena') elenaTargetCount += player.leftPart.level;
         if (player.rightPart.id === 'elena') elenaTargetCount += player.rightPart.level;
 
-        // Barie 파츠 체크 (상대방이 Elena일 때만)
         if (player.leftPart.id === 'barie' && player.rightPart.id === 'elena') {
             barieTargetCount += player.leftPart.level;
         }
         if (player.rightPart.id === 'barie' && player.leftPart.id === 'elena') {
             barieTargetCount += player.rightPart.level;
         }
-        //rim 파츠 체크
         let isOffmask = (player.leftPart.id === 'rim' || player.rightPart.id === 'rim') && player.invincible;
 
-        // 2. 배열 길이 동기화 (생성 및 삭제)
         while (player.elenaDrones.length < elenaTargetCount) player.elenaDrones.push({ x: player.x, y: player.y, cooldown: 0 });
         while (player.elenaDrones.length > elenaTargetCount) player.elenaDrones.pop();
 
         while (player.barieDrones.length < barieTargetCount) player.barieDrones.push({ x: player.x, y: player.y, cooldown: 0 });
         while (player.barieDrones.length > barieTargetCount) player.barieDrones.pop();
 
-        // 3. 공통 변수 계산 (amelia 속도, 공속 버프 등)
         let ameliaLevel = 0;
         if (player.leftPart.id === 'amelia') ameliaLevel += player.leftPart.level;
         if (player.rightPart.id === 'amelia') ameliaLevel += player.rightPart.level;
-        // Barie가 amelia를 복사하는 경우
         if (player.leftPart.id === 'barie' && player.rightPart.id === 'amelia') ameliaLevel += player.leftPart.level;
         if (player.rightPart.id === 'barie' && player.leftPart.id === 'amelia') ameliaLevel += player.rightPart.level;
 
@@ -1331,7 +1099,6 @@
         if (player.leftPart.id === 'haley') haleyLevel = Math.max(haleyLevel, player.leftPart.level);
         if (player.rightPart.id === 'haley') haleyLevel = Math.max(haleyLevel, player.rightPart.level);
 
-        // 4. 드론 움직임 처리 내부 함수
         const processDroneGroup = (drones, bulletColor, yOffset) => {
             let targetedEnemyIds = new Set();
             const getDist = (o1, o2) => Math.hypot(o1.x - o2.x, o1.y - o2.y);
@@ -1339,7 +1106,6 @@
             let targetGroups = {}; 
             let playerKey = 'player_pos';
 
-            // 타겟 선정
             drones.forEach((drone) => {
                 let target = null;
                 let bestDist = Infinity;
@@ -1353,7 +1119,6 @@
                     }
                 });
                 
-                // 타겟을 못 찾았으면 이미 타겟팅된 적이라도 가장 가까운 적 찾기
                 if (!target) {
                     bestDist = Infinity;
                     candidates.forEach(e => {
@@ -1372,7 +1137,6 @@
                 }
             });
 
-            // 이동 및 발사
             Object.values(targetGroups).forEach(group => {
                 let target = group.targetObj;
                 let dronesInGroup = group.drones;
@@ -1404,7 +1168,6 @@
 
                     if (target && drone.cooldown <= 0) {
                         if (Math.abs(drone.x - destX) < 20) {
-                            // 총알 색상을 인자로 받음
                             spawnBullet(drone.x, drone.y, 0, -25, 4, 10, bulletColor, 0.5); 
                             
                             let droneCd = 10;
@@ -1424,7 +1187,6 @@
             });
         };
 
-        // 5. 각각 실행 (Elena는 청록색탄, Barie는 보라색탄)
         if (player.elenaDrones.length > 0) processDroneGroup(player.elenaDrones, 'cyan', 0);
         if (player.barieDrones.length > 0) processDroneGroup(player.barieDrones, 'purple', 30);
     }
@@ -1432,8 +1194,6 @@
     function updateNaiaDrones() {
         let radius = 60; 
         
-        // --- [버프 계산] ---
-        // (기존과 동일: Haley 공속, Rim 무적 공속)
         let haleyLevel = 0;
         if (player.leftPart.id === 'haley') haleyLevel = Math.max(haleyLevel, player.leftPart.level);
         if (player.rightPart.id === 'haley') haleyLevel = Math.max(haleyLevel, player.rightPart.level);
@@ -1446,7 +1206,6 @@
 
         let finalCooldown = Math.floor(6 / speedMult);
 
-        // --- 3. [신규] Naia 및 Barie 레벨 계산 ---
         let naiaLevel = 0;
         if (player.leftPart.id === 'naia') naiaLevel = Math.max(naiaLevel, player.leftPart.level);
         if (player.rightPart.id === 'naia') naiaLevel = Math.max(naiaLevel, player.rightPart.level);
@@ -1455,23 +1214,18 @@
         if (player.leftPart.id === 'barie' && player.rightPart.id === 'naia') barieLevel = player.leftPart.level;
         if (player.rightPart.id === 'barie' && player.leftPart.id === 'naia') barieLevel = player.rightPart.level;
 
-        // --- 3. Silphir 시너지 확인 [NEW] ---
         let hasSilphir = (player.leftPart.id === 'silphir' || player.rightPart.id === 'silphir');
 
-        // [핵심 변경: 5초마다 랜덤 개수 변경 로직]
         let hasNaia = (player.leftPart.id === 'naia' || player.rightPart.id === 'naia' ||
-                       (player.leftPart.id === 'barie' && player.rightPart.id === 'naia') ||
-                       (player.rightPart.id === 'barie' && player.leftPart.id === 'naia'));
+                        (player.leftPart.id === 'barie' && player.rightPart.id === 'naia') ||
+                        (player.rightPart.id === 'barie' && player.leftPart.id === 'naia'));
 
         if (hasNaia) {
             player.naiaTimer++;
-            // 300 프레임 = 5초 (60fps 기준)
             if (player.naiaTimer >= 300) {
                 player.naiaTimer = 0;
-                // 1 ~ 3개 사이 랜덤 설정
                 player.naiaCurrentCount = Math.floor(Math.random() * 3) + 1;
                 if (hasSilphir) player.naiaCurrentCount = Math.max(2 , player.naiaCurrentCount);
-                // 시각적 피드백 (파티클 생성으로 변경 알림)
                 createParticles(player.x + 25, player.y + 20, 'royalblue');
                 console.log("Naia Protocol Updated: " + player.naiaCurrentCount + " Drones");
             }
@@ -1480,20 +1234,16 @@
         }
 
 
-        // 1. 목표 드론 개수 적용
         let naiaTarget = 0;
         let barieTarget = 0;
      
-        // Naia 본체: 랜덤 카운트 적용
         if (player.leftPart.id === 'naia') {naiaTarget += player.naiaCurrentCount; player.naiaRotation += 0.07;}
         if (player.rightPart.id === 'naia') {naiaTarget += player.naiaCurrentCount; player.naiaRotation -= 0.07;}
 
-        // Barie 복제: 랜덤 카운트 똑같이 따라감 (Naia 프로토콜 공유)
         if (player.leftPart.id === 'barie' && player.rightPart.id === 'naia') barieTarget += player.naiaCurrentCount;
         if (player.rightPart.id === 'barie' && player.leftPart.id === 'naia') barieTarget += player.naiaCurrentCount;
 
 
-        // 2. 드론 생성/삭제 및 동작 함수 (기존 유지)
         const updateDroneGroup = (dronesArray, targetCount, bulletColor, angleModifier, damageLevel, naiadronrotation) => {
             while (dronesArray.length < targetCount) {
                 dronesArray.push({ x: player.x, y: player.y, cooldown: Math.random() * 20 });
@@ -1511,7 +1261,6 @@
 
                 if (drone.cooldown > 0) drone.cooldown--;
                 else {
-                    // [데미지 계산]
                     let finalDmg = 0.5 + (damageLevel - 1) * 0.125; 
                     spawnBullet(drone.x, drone.y, 0, -20, 4, 12, bulletColor, finalDmg, 'rect'); 
                     drone.cooldown = finalCooldown; 
@@ -1519,15 +1268,12 @@
             });
         };
 
-        // Naia 드론 그룹 실행 (naiaLevel 전달)
         if (naiaTarget > 0) updateDroneGroup(player.naiaDrones, naiaTarget, 'royalblue', 0, naiaLevel, player.naiaRotation);
         
-        // Barie 드론 그룹 실행 (barieLevel 전달)
         if (barieTarget > 0) updateDroneGroup(player.barieNaiaDrones, barieTarget, 'purple', Math.PI / 4, barieLevel, player.naiaRotation*(-1));
     }
 
     function drawNaiaDrones() {
-        // 내부 그리기 도우미 함수
         const renderDrone = (drone, index, color, isBarie) => {
             ctx.save();
             ctx.translate(drone.x, drone.y);
@@ -1539,20 +1285,15 @@
             ctx.beginPath();
 
             if (!isBarie) {
-                // [Naia Original] 1:삼각, 2:사각, 3:원
                 if (index === 0) { ctx.moveTo(0, -8); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); } 
                 else if (index === 1) { ctx.rect(-6, -6, 12, 12); } 
                 else { ctx.arc(0, 0, 6, 0, Math.PI * 2); }
             } else {
-                // [Barie Copy] 1:마름모, 2:모래시계(X), 3:육각형
                 if (index === 0) { 
-                    // 마름모
                     ctx.moveTo(0, -8); ctx.lineTo(6, 0); ctx.lineTo(0, 8); ctx.lineTo(-6, 0); 
                 } else if (index === 1) { 
-                    // 모래시계 (X 모양)
                     ctx.moveTo(-6, -6); ctx.lineTo(6, 6); ctx.lineTo(-6, 6); ctx.lineTo(6, -6); 
                 } else { 
-                    // 육각형
                     for (let i = 0; i < 6; i++) {
                         let angle = (Math.PI / 3) * i;
                         let px = Math.cos(angle) * 7;
@@ -1562,16 +1303,14 @@
                 }
             }
             
-            ctx.closePath(); // 도형 닫기
+            ctx.closePath(); 
             ctx.fill();
             ctx.stroke();
             ctx.restore();
         };
 
-        // Naia 드론 그리기 (Blue)
         player.naiaDrones.forEach((d, i) => renderDrone(d, i, 'royalblue', false));
         
-        // Barie 드론 그리기 (Purple)
         player.barieNaiaDrones.forEach((d, i) => renderDrone(d, i, 'purple', true));
     }
 
@@ -1584,11 +1323,9 @@
             ctx.lineTo(d.x + 5, d.y + 5);
             ctx.fill();
         });
-    // [추가] Barie 드론 (Purple)
         ctx.fillStyle = 'purple';
         player.barieDrones.forEach(d => {
             ctx.beginPath();
-            // 모양은 같지만 색깔로 구분
             ctx.moveTo(d.x, d.y - 10);
             ctx.lineTo(d.x - 5, d.y + 5);
             ctx.lineTo(d.x + 5, d.y + 5);
@@ -1608,43 +1345,33 @@
 
         let finalDamage = dmg * damageMultiplier* silphirMult + damageAdd ;
 
-        // 총알 객체를 변수에 담습니다.
         let newBullet = { x, y, vx, vy, width: w * 2, height: h * 2, color, damage: finalDamage, shape };
         bullets.push(newBullet);
-        return newBullet; // [추가된 부분] 생성된 총알 객체를 반환합니다.
+        return newBullet; 
     }
 
     function updateBullets() {
-        // 1. amelia 파츠 장착 여부 및 유도 성능(Strength) 계산
         let homingStrength = 0;
         if (player.leftPart.id === 'amelia' && player.rightPart.id !== 'ner') homingStrength +=  (player.leftPart.level * 0.01);
         if (player.rightPart.id === 'amelia' && player.leftPart.id !== 'ner') homingStrength +=  (player.rightPart.level * 0.01);
         
-        // 유도 대상 목록 (일반 적 + 보스)
         let targets = [...enemies];
         if (boss) targets.push(boss);
 
         for (let i = bullets.length - 1; i >= 0; i--) {
             let b = bullets[i]; 
-            // [Kidian S자 궤적 로직 추가]
             if (b.trajectory === 'sine') {
-                b.timer += 0.15; // 흔들리는 속도 (주파수)
-                // 현재 진행 방향에 수직으로 위치를 강제로 이동시킵니다.
-                // Math.cos를 사용하여 발사 직후부터 휘어지기 시작하게 합니다.
-                // 5는 휘어지는 폭(진폭)입니다.
+                b.timer += 0.15; 
                 b.x += Math.cos(b.timer) * 5 * b.sidePhase;
             }
-            // [amelia 패시브: 유도 로직] 
-            // amelia가 있고, 화면에 적이 있을 때만 작동
             if (homingStrength > 0 && targets.length > 0) {
                 let closest = null;
                 let minDist = Infinity;
 
-                // 가장 가까운 적 찾기
                 targets.forEach(t => {
                     let dx = (t.x + t.width/2) - b.x;
                     let dy = (t.y + t.height/2) - b.y;
-                    let dist = dx*dx + dy*dy; // 거리는 제곱 상태로 비교 (연산 최적화)
+                    let dist = dx*dx + dy*dy; 
                     if (dist < minDist) {
                         minDist = dist;
                         closest = t;
@@ -1652,21 +1379,15 @@
                 });
 
                 if (closest) {
-                    // 적을 향한 각도 계산
                     let targetX = closest.x + closest.width/2;
                     let targetY = closest.y + closest.height/2;
                     let angle = Math.atan2(targetY - b.y, targetX - b.x);
 
-                    // 현재 총알의 속력(스피드) 유지
                     let speed = Math.hypot(b.vx, b.vy);
                     
-                    // 목표 방향 벡터
                     let desiredVx = Math.cos(angle) * speed;
-                    //let desiredVy = Math.sin(angle) * speed;
-
-                    // 현재 방향을 목표 방향으로 서서히 변경 (homingStrength 만큼)
+                    
                     b.vx += (desiredVx - b.vx) * homingStrength;
-                    //b.vy += (desiredVy - b.vy) * homingStrength;
                 }
             }
 
@@ -1816,40 +1537,34 @@
     }
 
     function updatePlayerMove() {
-        // [수정] 이동 속도 및 방향 계산 로직 통합
-        let speedMultiple = 1;
-        if (player.leftPart.id === 'haley') speedMultiple += (player.leftPart.level * 0.1);
-        else if (player.rightPart.id === 'haley') speedMultiple += (player.rightPart.level * 0.1);
-        
-        if (player.leftPart.id === 'lethe') speedMultiple -= (player.leftPart.level * 0.1);
-        else if (player.rightPart.id === 'lethe') speedMultiple -= (player.rightPart.level * 0.1);
-        
-        let moveSpeed = player.speed * speedMultiple;
-        
         let dx = 0;
         let dy = 0;
 
-        // 키보드 입력
+        // 키보드 입력만 여기서 처리 (터치 입력은 이벤트 리스너에서 직접 처리)
         if (keys.ArrowUp) dy -= 1;
         if (keys.ArrowDown) dy += 1;
         if (keys.ArrowLeft) dx -= 1;
         if (keys.ArrowRight) dx += 1;
 
-        // 조이스틱 입력 (키보드가 없을 때만 혹은 합산)
-        if (joystick.active) {
-            dx = joystick.x;
-            dy = joystick.y;
+        if (dx !== 0 || dy !== 0) {
+            let speedMultiple = 1;
+            if (player.leftPart.id === 'haley') speedMultiple += (player.leftPart.level * 0.1);
+            else if (player.rightPart.id === 'haley') speedMultiple += (player.rightPart.level * 0.1);
+            
+            if (player.leftPart.id === 'lethe') speedMultiple -= (player.leftPart.level * 0.1);
+            else if (player.rightPart.id === 'lethe') speedMultiple -= (player.rightPart.level * 0.1);
+            
+            let moveSpeed = player.speed * speedMultiple;
+
+            player.x += dx * moveSpeed;
+            player.y += dy * moveSpeed;
+
+            // 화면 밖 제한
+            if (player.x < 0) player.x = 0;
+            if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+            if (player.y < 0) player.y = 0;
+            if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
         }
-
-        // 실제 이동 적용
-        player.x += dx * moveSpeed;
-        player.y += dy * moveSpeed;
-
-        // 화면 밖으로 나가지 않게 제한
-        if (player.x < 0) player.x = 0;
-        if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
-        if (player.y < 0) player.y = 0;
-        if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
 
         if (player.invincible) { 
             player.invincibleTimer--; 
@@ -1865,22 +1580,17 @@
             ctx.fillStyle = "white"; ctx.font = "10px Arial"; ctx.fillText(`L${player.leftPart.level}`, x, y + h + 10); ctx.fillText(`L${player.rightPart.level}`, x + w - 15, y + h + 10);
         }
 
-        // active 상태이고 실드가 0보다 클 때만 그립니다.
         if (player.gabiaState === 'active' && player.gabiaShield > 0) {
             ctx.beginPath();
-            // 기체 중심(x+25, y+20)을 기준으로 반지름 40인 원
             ctx.arc(player.x + 25, player.y + 20, 40, 0, Math.PI * 2);
-            // 보호막 비율에 따라 투명도 조절
             let opacity = 0.3 + (player.gabiaShield / player.gabiaMaxShield) * 0.7;
             ctx.strokeStyle = `rgba(139, 69, 19, ${opacity})`; 
             ctx.lineWidth = 3;
             ctx.stroke();
-            // 살짝 채워진 느낌
             ctx.fillStyle = `rgba(139, 69, 19, 0.1)`;
             ctx.fill();
         }
        
-        // [수정됨] side 인자를 받아 위치를 다르게 설정
         const drawLaser = (laser, partLevel, side) => {
             if (!laser.active) return;
 
@@ -1889,7 +1599,6 @@
             let baseW = 15 + (partLevel - 1) * 5;
             let laserW = isBoosted ? baseW * 1.5 : baseW;
             
-            // 강화 상태면 중앙, 아니면 측면
             let ox;
             if (isBoosted) {
                 ox = player.x + 25;
@@ -1899,21 +1608,18 @@
             let oy = player.y ;
 
             ctx.save();
-            ctx.translate(ox, oy); // 계산된 날개 위치로 이동
+            ctx.translate(ox, oy); 
             ctx.rotate(laser.angle + Math.PI / 2); 
             
-            // 레이저 본체
             ctx.fillStyle = 'rgba(255, 0, 0, 0.7)';
             ctx.fillRect(-laserW / 2, -1000, laserW, 1000); 
             
-            // 코어 (흰색)
             ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
             ctx.fillRect(-laserW / 4, -1000, laserW / 2, 1000);
             
             ctx.restore();
         };
 
-        // 호출 시 'left', 'right' 전달
         drawLaser(player.leftLaser, player.leftPart.level, 'left');
         drawLaser(player.rightLaser, player.rightPart.level, 'right');
     }
@@ -1975,37 +1681,28 @@
         updateUI();
     }
     function updatePlayerStats() {
-        // 1. 변경 전의 최대 체력과 현재 체력 비율을 저장
         let oldMaxHp = player.maxHp;
         let currentHpRatio = 1.0;
-        // 게임 시작 시 oldMaxHp가 0이거나 초기화 전일 수 있으므로 방어 코드 작성
         if (oldMaxHp > 0) {
             currentHpRatio = player.hp / oldMaxHp;
         }
-        // [Asana 패시브: 최대 체력 재계산]
         let hpMultiplier = 1.0;
-        // 왼쪽 파츠 확인
         if (player.leftPart.id === 'asana') {
             hpMultiplier += (player.leftPart.level * 0.1);
         }
         if (player.leftPart.id === 'suro') {
             hpMultiplier -= (player.leftPart.level * 0.1);
         }
-        // 오른쪽 파츠 확인
         if (player.rightPart.id === 'asana') {
             hpMultiplier += (player.rightPart.level * 0.1);
         }
         if (player.rightPart.id === 'suro') {
             hpMultiplier -= (player.rightPart.level * 0.1);
         }
-        // 최대 체력 갱신
         let newMaxHp = Math.floor(100 * hpMultiplier);
         player.maxHp = newMaxHp;
-        // 3. [비례 적용] 저장해둔 비율을 새로운 최대 체력에 곱해서 현재 체력 보정
-        // 단, 체력이 0 이하(사망 상태)가 아니었다면 최소 1은 남김
         player.hp = Math.floor(newMaxHp * currentHpRatio);
 
-        // [추가됨] Gabia Max Shield 계산 (레벨당 10)
         let gabiaLevel = 0;
         if (player.leftPart.id === 'gabia') gabiaLevel += player.leftPart.level;
         if (player.rightPart.id === 'gabia') gabiaLevel += player.rightPart.level;
@@ -2013,19 +1710,15 @@
         let oldMax = player.gabiaMaxShield;
         player.gabiaMaxShield = gabiaLevel * 20;
         
-        // 레벨업으로 최대치가 늘어나면, 현재 실드량도 비율에 맞춰 늘려주거나 그대로 둠
-        // 여기서는 최대치만 늘리고, 회복 로직에 맡김. 단, 장착 해제 시 0 처리
         if (player.gabiaMaxShield === 0) {
             player.gabiaShield = 0;
             player.gabiaState = 'active';
         } else if (player.gabiaState === 'active' && player.gabiaShield > player.gabiaMaxShield) {
             player.gabiaShield = player.gabiaMaxShield;
         }
-        // 변경된 스탯을 UI에 즉시 반영
         updateUI();
     }
     function updateUI() {
-        // [수정됨] 쉴드 정보 추가 표시
         let shieldInfo = "";
         if (player.gabiaMaxShield > 0) {
             if (player.gabiaState === 'broken') shieldInfo = " [SHIELD REBOOTING...]";
@@ -2035,16 +1728,15 @@
         uiHpBar.style.width = (player.hp / player.maxHp * 100) + "%"; 
         uiHpText.innerText = `HP: ${Math.floor(player.hp)}/${player.maxHp}` + shieldInfo;
         
-        // ... 기존 코드 ...
         uiXpBar.style.width = (player.currentExp / player.maxExp * 100) + "%"; uiXpText.innerText = `LV.${player.level} (${Math.floor(player.currentExp)}/${player.maxExp})`;
-        uiScore.innerText = `Score: ${score}`; uiBombText.innerText = `💣 BOMB: ${player.bombs} (Key: Z)`;
+        uiScore.innerText = `Score: ${score}`; uiBombText.innerText = `💣 BOMB: ${player.bombs} (Double Tap)`;
     }
 
     function showUpgradeModal() {
         gameState = "paused"; modal.style.display = "flex"; selectUi.style.display = "flex"; replaceUi.style.display = "none";
         upgradeSelectedIndex = 0;
         let keys = Object.keys(PARTS_INFO); keys.sort(() => Math.random() - 0.5); let choices = keys.slice(0, 3);
-        currentUpgradeChoices = choices; // 저장
+        currentUpgradeChoices = choices; 
         cardList.innerHTML = "";
         choices.forEach((key, idx) => {
             let info = PARTS_INFO[key]; 
@@ -2074,23 +1766,20 @@
             document.getElementById('btn-replace-right').innerText = `오른쪽: ${PARTS_INFO[player.rightPart.id].name} (Lv.${player.rightPart.level}) 교체`; 
         }
     }
-    // Button Clicks
     document.getElementById('btn-replace-left').onclick = () => replacePart('left'); 
     document.getElementById('btn-replace-right').onclick = () => replacePart('right');
     document.getElementById('btn-replace-cancel').onclick = () => cancelReplace();
 
     function replacePart(side) { 
         let oldPart = player[side + 'Part']; let newLevel = Math.max(1, oldPart.level); 
-        if (oldPart.id === 'Ifrit') player.IfritOrbs = []; if (oldPart.id === 'elena') player.elenaDrones = []; if (oldPart.id === 'barie') player.barieDrones = []; // [추가] Barie 교체 시 드론 삭제
+        if (oldPart.id === 'Ifrit') player.IfritOrbs = []; if (oldPart.id === 'elena') player.elenaDrones = []; if (oldPart.id === 'barie') player.barieDrones = []; 
         
-        // 교체 시 레이저 상태 초기화
         if(oldPart.id === 'lethe') {
              if(side === 'left') player.leftLaser = { active: false, timer: 0 };
              else player.rightLaser = { active: false, timer: 0 };
         }
 
         player[side + 'Part'] = { id: selectedNewPartId, level: newLevel }; 
-    // 쿨다운(딜레이) 강제 적용 ---
         if (side === 'left') {
             player.leftCooldown = 0;
         } else {
@@ -2098,11 +1787,10 @@
         }
 
         finishUpgrade(); 
-        // [수정됨] 교체된 파츠가 Gabia라면 쉴드를 즉시 최대치로 충전
         if (selectedNewPartId === 'gabia') {
             player.gabiaShield = player.gabiaMaxShield;
             player.gabiaState = 'active';
-            updateUI(); // UI 즉시 갱신
+            updateUI(); 
         }
     }
     function cancelReplace() { replaceUi.style.display = "none"; selectUi.style.display = "flex"; }
@@ -2112,11 +1800,9 @@
         for(let i=particles.length-1; i>=0; i--) { let p = particles[i]; p.x+=p.vx; p.y+=p.vy; p.life--; ctx.fillStyle=p.color; ctx.globalAlpha=p.life/10; ctx.fillRect(p.x, p.y, 4, 4); ctx.globalAlpha=1; if(p.life<=0) particles.splice(i,1); }
     }
     
-    //데미지
     function takeDamage(amount) {
         if (player.invincible) return; 
 
-        // --- Shady 데미지 무시 로직 (기존 유지) ---
         let dodgeChance = 0;
         if (player.leftPart.id === 'shady') dodgeChance = 0.4 + (player.leftPart.level - 1) * 0.1;
         else if (player.rightPart.id === 'shady') dodgeChance = 0.4 + (player.rightPart.level - 1) * 0.1;
@@ -2124,39 +1810,30 @@
         if (Math.random() < dodgeChance) {
             createParticles(player.x + 25, player.y + 20, 'cyan');
             console.log("DODGE!");
-            // 무시 성공 시에도 짧은 무적을 주어 연속 피격 방지 (기존 로직 유지)
             player.invincible = true; player.invincibleTimer = 180;
             return;
         }
-        // --- Shady 로직 끝 ---
 
-        // [추가/수정됨] Gabia 보호막 로직
-        // 보호막이 켜져있고(active) 잔량이 있어야 함
         if (player.gabiaState === 'active' && player.gabiaShield > 0) {
             player.gabiaShield -= amount;
-            player.gabiaHitTimer = 180; // 피격 시 3초(180프레임) 동안 회복 멈춤
-            createParticles(player.x + 25, player.y + 20, '#8B4513'); // 갈색 파티클
+            player.gabiaHitTimer = 180; 
+            createParticles(player.x + 25, player.y + 20, '#8B4513'); 
 
-            // 보호막이 깨졌는지 확인
             if (player.gabiaShield <= 0) {
                 player.gabiaShield = 0;
-                player.gabiaState = 'broken'; // 20초 리부트 상태로 전환
+                player.gabiaState = 'broken'; 
                 
-                // *** 보호막 파괴 시에만 무적 시간 부여 (기존 무적 로직 적용) ***
                 player.invincible = true; 
                 player.invincibleTimer = 180;
-                createParticles(player.x+25, player.y+20, 'white'); // 깨짐 이펙트
+                createParticles(player.x+25, player.y+20, 'white'); 
                 console.log("Shield Broken! Rebooting in 20s...");
-            } else {
-                // 보호막이 남아있으면 무적 시간 없음 (바로 다음 총알에 맞을 수 있음)
-            }
+            } 
             updateUI();
-            return; // HP는 깎이지 않음
+            return; 
         }
 
-        // 보호막이 없으면 체력 감소 (기존 로직)
         player.hp -= amount; 
-	player.totalHitCount++;
+        player.totalHitCount++;
         updateUI();
         if (player.hp > 0) {
 
@@ -2166,96 +1843,72 @@
     }
 
     function updateGabiaShield() {
-        // 가비아 파츠가 없으면 리턴
         if (player.gabiaMaxShield <= 0) return;
 
         if (player.gabiaState === 'broken') {
-            // [리부트 모드] 30초(1800프레임) 동안 0에서 Max까지 회복
-            // 프레임당 회복량 = Max / 1800
             let regenRate = player.gabiaMaxShield / 1800; 
             player.gabiaShield += regenRate;
 
-            // 최대치 도달 시 활성화
             if (player.gabiaShield >= player.gabiaMaxShield) {
                 player.gabiaShield = player.gabiaMaxShield;
                 player.gabiaState = 'active';
-                createParticles(player.x + 25, player.y + 20, '#8B4513'); // 복구 이펙트
+                createParticles(player.x + 25, player.y + 20, '#8B4513'); 
                 updateUI();
             }
         } else {
-            // [활성 모드]
-            // 피격 대기 시간 체크
             if (player.gabiaHitTimer > 0) {
                 player.gabiaHitTimer--;
             } else {
-                // 대기 시간 지났으면 10초(600프레임) 동안 Max까지 회복
                 if (player.gabiaShield < player.gabiaMaxShield) {
                     let regenRate = player.gabiaMaxShield / 600;
                     player.gabiaShield += regenRate;
                     if (player.gabiaShield > player.gabiaMaxShield) player.gabiaShield = player.gabiaMaxShield;
-                    // UI 업데이트는 너무 잦으므로 생략하거나 필요시 frame % 60 == 0 마다 호출
                 }
             }
         }
-        // UI에 실드 수치를 실시간으로 보여주기 위해 10프레임마다 갱신
         if (frame % 10 === 0) updateUI();
     }
     function applyDianaLifesteal(damage) {
-        // 왼쪽이나 오른쪽에 Diana가 있는지 확인
         if (player.leftPart.id === 'diana' || player.rightPart.id === 'diana') {
-            let healAmount = damage * 0.05; // 데미지의 5%
+            let healAmount = damage * 0.05; 
             if (healAmount > 0) {
-                // 최대 체력을 넘지 않도록 회복
                 player.hp = Math.min(player.maxHp, player.hp + healAmount);
-                // (선택) 회복 시 UI 즉시 갱신이 필요하다면 아래 주석 해제
                 updateUI(); 
             }
         }
     }
 
     function getSilphirMultiplier() {
-        // 1. Silphir 장착 여부 및 레벨 확인
         let silphirLevel = 0;
         if (player.leftPart.id === 'silphir') silphirLevel = Math.max(silphirLevel, player.leftPart.level);
         if (player.rightPart.id === 'silphir') silphirLevel = Math.max(silphirLevel, player.rightPart.level);
     
-        // Barie 복제 고려
         if (player.leftPart.id === 'barie' && player.rightPart.id === 'silphir') silphirLevel = Math.max(silphirLevel, player.leftPart.level);
         if (player.rightPart.id === 'barie' && player.leftPart.id === 'silphir') silphirLevel = Math.max(silphirLevel, player.rightPart.level);
 
-        // 장착하지 않았으면 배율 1.0 (변화 없음)
         if (silphirLevel === 0) return 1.0;
 
-        // 2. 진행도 계산 (5분 = 300초 = 18000프레임)
         let maxFrames = 18000;
         let progress = Math.min(1.0, player.silphirTimer / maxFrames);
 
-        // 3. 레벨별 최소/최대 배율 계산
-        // Lv.1: 1.0 ~ 1.5
-        // Lv.5: 1.5 ~ 2.5
-        // 선형 보간으로 중간 레벨 계산
-        let startMult = 1.0 + (silphirLevel - 1) * 0.125; // 1.0 ~ 1.5
-        let endMult = 1.5 + (silphirLevel - 1) * 0.25;    // 1.5 ~ 2.5
+        let startMult = 1.0 + (silphirLevel - 1) * 0.125; 
+        let endMult = 1.5 + (silphirLevel - 1) * 0.25;    
 
-        // 현재 배율
         return startMult + (endMult - startMult) * progress;
     }
     function updateNerOrbs() {
-        // [Amelia 레벨 체크] (구체 자체 유도를 위해)
         let ameliaLevel = 0;
         if (player.leftPart.id === 'amelia') ameliaLevel += player.leftPart.level;
         if (player.rightPart.id === 'amelia') ameliaLevel += player.rightPart.level;
-        let homingStrength = ameliaLevel * 0.005; // 구체는 무거우니 유도력을 약하게 설정
+        let homingStrength = ameliaLevel * 0.005; 
 
         for (let i = player.nerOrbs.length - 1; i >= 0; i--) {
             let orb = player.nerOrbs[i];
 
-            // [1] 구체 유도 로직 (Amelia가 있을 때만)
             if (homingStrength > 0 && !orb.isEnemy) {
                 let closest = null;
                 let minDist = Infinity;
                 
-                // 보스 우선
                 if (boss) {
                     closest = boss;
                 } else if (enemies.length > 0) {
@@ -2270,7 +1923,6 @@
                     let ty = closest.y + closest.height/2;
                     let angle = Math.atan2(ty - orb.y, tx - orb.x);
                     
-                    // 현재 속도 벡터 유지하며 방향 선회
                     let speed = Math.hypot(orb.vx, orb.vy);
                     let targetVx = Math.cos(angle) * speed;
                     let targetVy = Math.sin(angle) * speed;
@@ -2280,41 +1932,33 @@
                 }
             }
             
-            // 1. 이동 및 타이머
             orb.x += orb.vx;
             orb.y += orb.vy;
             orb.timer++;
 
-            // 2. 폭발 조건 체크
             let triggerExplosion = false;
 
-            // (A) 시간이 다 됐을 때
             if (orb.timer >= orb.explodeTime) {
                 triggerExplosion = true;
             }
 
-            // (B) 충돌 체크 (아직 안 터졌다면)
             if (!triggerExplosion) {
                 if (boss && rectIntersect(orb.x - 10, orb.y - 10, 20, 20, boss.x, boss.y, boss.width, boss.height)) {
                     triggerExplosion = true;
                 }
-                // 일반 적 충돌
                 if (!triggerExplosion) {
                     for (let e of enemies) {
                         if (rectIntersect(orb.x - 10, orb.y - 10, 20, 20, e.x, e.y, e.width, e.height)) {
                             triggerExplosion = true;
-                            break; // 하나라도 닿으면 터짐
+                            break; 
                         }
                     }
                 }
             }
 
-            // 3. 폭발 실행 (시간 만료 or 충돌)
             if (triggerExplosion) {
-                // 이펙트
                 createParticles(orb.x, orb.y, orb.isEnemy ? 'red' : 'orange');
 
-                // 총알 개수 계산
                 let bulletCount = 12 + (orb.level - 1) * 3;
                 let angleStep = (Math.PI * 2) / bulletCount;
 
@@ -2328,27 +1972,21 @@
                     let bvy = Math.sin(angle) * speed;
 
                     if (orb.isEnemy) {
-                        // 적군 탄환 (배신)
                         enemyBullets.push({ x: bx, y: by, vx: bvx, vy: bvy, radius: 4, color: 'red' });
                     } else {
-                        // 아군 탄환 (spawnBullet 사용 -> Silphir, Leets 자동 적용)
-                        // 적 내부에서 터지면 전탄 명중하므로 데미지 배율을 조금 조정해도 됨 (현재 0.8)
                         spawnBullet(bx, by, bvx, bvy, 4, 4, 'yellow', 2, 'circle');
                     }
                 }
 
-                // 구체 삭제
                 player.nerOrbs.splice(i, 1);
-                continue; // 그리기 생략하고 다음 루프로
+                continue; 
             }
 
-            // 4. 화면 밖으로 나가면 삭제 (폭발 없이)
             if (orb.y < -50 || orb.y > canvas.height + 50) {
                 player.nerOrbs.splice(i, 1);
                 continue;
             }
 
-            // 5. 그리기 (폭발 안 했을 때만)
             ctx.beginPath();
             ctx.arc(orb.x, orb.y, 10, 0, Math.PI * 2); 
             ctx.fillStyle = orb.isEnemy ? '#8B0000' : '#FF8C00'; 
