@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dual Core Shooter : Touch Remaster</title>
+    <title>Dual Core Shooter : Touch Fix</title>
     <style>
         /* 1. 배경 및 레이아웃 설정 */
         body { 
@@ -12,28 +12,21 @@
             display: flex; 
             justify-content: center; 
             align-items: center; 
-            height: 100dvh; /* 모바일 브라우저 높이 대응 */
+            height: 100dvh; 
             width: 100vw;
             color: white; 
             font-family: 'Arial', sans-serif; 
             overflow: hidden; 
-            touch-action: none; /* 브라우저 기본 터치 동작(스크롤 등) 차단 */
+            touch-action: none; 
         }
 
         /* 2. 게임기 본체: 비율 유지 및 자동 크기 조절 */
         #game-container {
             position: relative;
-            
-            /* [핵심] 450:700 비율 고정 */
             aspect-ratio: 450 / 700; 
-            
-            /* 높이를 화면에 맞춤 */
             height: 100%; 
             width: auto;
-            
-            /* 너비가 화면을 넘어가면 너비에 맞춤 (가로 모드 등 대응) */
             max-width: 100%;
-            
             background-color: #222; 
             box-shadow: 0 0 50px rgba(0,0,0,0.8); 
             overflow: hidden;
@@ -303,7 +296,10 @@
         const gameContainer = document.getElementById('game-container');
 
         gameContainer.addEventListener('touchstart', (e) => {
-            e.preventDefault(); // 스크롤 방지
+            // *** [수정됨] 게임 중이 아닐 때는 기본 동작(클릭)을 막지 않음 ***
+            if (gameState !== "playing") return;
+
+            e.preventDefault(); // 게임 중일 때만 스크롤 방지
             const touch = e.changedTouches[0];
             lastTouchX = touch.clientX;
             lastTouchY = touch.clientY;
@@ -311,15 +307,15 @@
             // 더블 탭 폭탄 감지
             const currentTime = Date.now();
             if (currentTime - lastTapTime < 300) { // 300ms 이내 두 번 탭
-                if (gameState === "playing") useBomb();
+                useBomb();
             }
             lastTapTime = currentTime;
 
         }, {passive: false});
 
         gameContainer.addEventListener('touchmove', (e) => {
+            if (gameState !== "playing") return; // 게임 중이 아니면 리턴
             e.preventDefault();
-            if (gameState !== "playing") return;
 
             const touch = e.changedTouches[0];
             const dx = touch.clientX - lastTouchX;
@@ -346,9 +342,12 @@
         }, {passive: false});
 
         gameContainer.addEventListener('touchend', (e) => {
-             e.preventDefault();
-             lastTouchX = null;
-             lastTouchY = null;
+             // 게임 중일 때만 처리
+             if (gameState === "playing") {
+                e.preventDefault();
+                lastTouchX = null;
+                lastTouchY = null;
+             }
         });
     }
 
