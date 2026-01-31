@@ -10,11 +10,18 @@
         
         /* [수정] 캔버스 크기 반응형으로 변경 */
         canvas { 
+        /* 가로를 부모 요소(화면)의 100%로 설정 */
+            width: 100%;
+        /* 가로가 변함에 따라 세로 비율을 자동으로 유지 */
+            height: auto; 
+        /* 게임 비율(450:700)을 명시하여 레이아웃 깨짐 방지 */
+            aspect-ratio: 450 / 700;
+        /* (선택사항) 태블릿이나 PC에서 너무 무식하게 커지는 것 방지 */
+            max-width: 600px; 
+        /* 기존 스타일 유지 */
             background-color: #87ceeb; 
             border: 2px solid #555; 
             box-shadow: 0 0 20px rgba(0,0,0,0.5); 
-            max-width: 100%; 
-            max-height: 100vh; 
         }
         
         /* UI 공통 */
