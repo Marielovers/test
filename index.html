@@ -8,20 +8,27 @@
 /* [수정] body에 touch-action: none 추가 (모바일 스크롤 방지) */
         body { margin: 0; background-color: #222; display: flex; justify-content: center; align-items: center; height: 100vh; color: white; font-family: 'Arial', sans-serif; overflow: hidden; touch-action: none; }
         
-        /* [수정] 캔버스 크기 반응형으로 변경 */
-        canvas { 
-        /* 가로를 부모 요소(화면)의 100%로 설정 */
-            width: 100%;
-        /* 가로가 변함에 따라 세로 비율을 자동으로 유지 */
-            height: auto; 
-        /* 게임 비율(450:700)을 명시하여 레이아웃 깨짐 방지 */
+        canvas {
+            /* [핵심 1] 테두리까지 포함해서 크기를 계산 (삐져나감 방지) */
+            box-sizing: border-box;
+
+            /* [핵심 2] 화면 너비와 높이 중 '더 좁은 쪽'에 맞춤 (Contain 방식) */
+            width: 100%;             /* 일단 너비를 꽉 채움 */
+            height: auto;            /* 높이는 비율에 맞춰 자동 조절 */
+    
+            max-width: 100%;         /* 너비가 화면보다 커지지 않게 제한 */
+            max-height: 100vh;       /* 높이가 화면보다 커지지 않게 제한 */
+    
+            /* 비율 고정 */
             aspect-ratio: 450 / 700;
-        /* (선택사항) 태블릿이나 PC에서 너무 무식하게 커지는 것 방지 */
-            max-width: 600px; 
-        /* 기존 스타일 유지 */
-            background-color: #87ceeb; 
-            border: 2px solid #555; 
-            box-shadow: 0 0 20px rgba(0,0,0,0.5); 
+
+            /* 디자인 */
+            background-color: #87ceeb;
+            border: 2px solid #555;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    
+            /* 중앙 정렬 보정 (Flex 컨테이너 안에서 작동) */
+            display: block; 
         }
         
         /* UI 공통 */
