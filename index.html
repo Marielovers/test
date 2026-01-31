@@ -353,6 +353,14 @@
             if (gameState === "paused") { handleUpgradeKey(e.code); }
         });
         document.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.code)) keys[e.code]=false; });
+        // [추가할 코드 시작] --------------------------
+        // 터치가 지원되는 기기인지 확인
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        // 터치 기기라면 모바일 컨트롤 패널을 강제로 표시
+        if (isTouchDevice) {
+            document.getElementById('mobile-controls').style.display = 'block';
+        }
         // [추가] 모바일 조이스틱 로직
         const joystickZone = document.getElementById('joystick-zone');
         const stick = document.getElementById('joystick-stick');
