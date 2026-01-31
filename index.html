@@ -307,6 +307,9 @@
     };
 
     let gameState = "title"; 
+    let fps = 60;
+    let fpsInterval = 1000 / fps;
+    let now, then, elapsed;
     let score = 0;
     let frame = 0;
     let nextSpawnFrame = 0;
@@ -594,6 +597,10 @@
         if (player.gabiaMaxShield > 0) {
             player.gabiaShield = player.gabiaMaxShield;
         }
+        then = Date.now();
+        startTime = then;
+        updatePlayerStats();
+
         updateUI();
         animate();
     }
@@ -685,98 +692,95 @@
     }
 
     function animate() {
-        if (gameState !== "playing") return;
-        if (frame % 60 === 0) {
-            let totalRegen = 0;
-        // 왼쪽 파츠가 asana일 때 레벨만큼 회복량 추가
-            if (player.leftPart.id === 'asana' && !player.invincible ) {
-                totalRegen += ((player.leftPart.level) *0.1 ); 
-            }
-            // 오른쪽 파츠가 asana일 때 레벨만큼 회복량 추가
-            if (player.rightPart.id === 'asana' && !player.invincible ) {
-                totalRegen += ((player.rightPart.level) *0.1 );
-            }
-            if (totalRegen > 0) {
-                player.hp = Math.min(player.maxHp, player.hp + totalRegen);
-                updateUI(); // HP 바 갱신
-                // 시각 효과: 회복될 때 기체 위치에 초록색 파티클 생성
-                createParticles(player.x + 25, player.y + 20, '#44ff44');
-            }
-        }
-    // animate 함수 내부, try 블록 시작 전후
-    // --- [Silphir 타이머 로직] ---
-    let hasSilphir = (player.leftPart.id === 'silphir' || player.rightPart.id === 'silphir' ||
-                      (player.leftPart.id === 'barie' && player.rightPart.id === 'silphir') ||
-                      (player.rightPart.id === 'barie' && player.leftPart.id === 'silphir'));
-    
-    // (일시정지/업그레이드 화면에서는 타이머가 멈춘 상태로 유지됨)
-    if (gameState === "playing") {
-        if (hasSilphir) {
-            player.silphirTimer++;
-        } else {
-            player.silphirTimer = 0; // 플레이 중인데 Silphir가 없으면(교체됨) 0으로 초기화
-        }
-    }
+        // 1. 다음 프레임 요청을 먼저 걸어둡니다 (모니터 주사율에 맞춰 계속 호출됨)
+        requestAnimationFrame(animate);
 
-        // --- [Suro & Diana 시너지 로직] ---
-        let hasSuro = (player.leftPart.id === 'suro' || player.rightPart.id === 'suro');
-        let hasDiana = (player.leftPart.id === 'diana' || player.rightPart.id === 'diana');
+        // 2. 현재 시간 확인
+        now = Date.now();
+        elapsed = now - then;
 
-        if (hasSuro && hasDiana && gameState === "playing") {
-            player.suroTimer++;
-            // 10초 = 600프레임 (60fps 기준)
-            if (player.suroTimer >= 600) {
-                player.suroTimer = 0;
-                // 자해 데미지 1 적용
-                if (player.hp > 0) {
-                    player.hp -= 1;
-                    player.totalHitCount++; // 자해 데미지도 피격 횟수에 포함
-                    // 시각 효과 (피격 느낌은 주되 무적시간은 주지 않음)
-                    createParticles(player.x + 25, player.y + 20, '#800000');
+        // 3. 약속된 시간(1/60초)보다 조금이라도 더 지났을 때만 로직 실행
+        if (elapsed > fpsInterval) {
+            // 시간 보정 (다음 프레임 계산을 위해)
+            then = now - (elapsed % fpsInterval);
+
+            // --- [여기서부터 기존 게임 로직 시작] ---
+            if (gameState !== "playing") return;
+
+            if (frame % 60 === 0) {
+                let totalRegen = 0;
+                if (player.leftPart.id === 'asana' && !player.invincible ) { totalRegen += ((player.leftPart.level) *0.1 ); }
+                if (player.rightPart.id === 'asana' && !player.invincible ) { totalRegen += ((player.rightPart.level) *0.1 ); }
+                if (totalRegen > 0) {
+                    player.hp = Math.min(player.maxHp, player.hp + totalRegen);
                     updateUI();
-                    // (선택 사항) 자해로 죽을 수도 있다면:
-                    if (player.hp <= 0) {
-                        drawGameOver();
-                        return; 
+                    createParticles(player.x + 25, player.y + 20, '#44ff44');
+                }
+            }
+
+            // Silphir 타이머
+            let hasSilphir = (player.leftPart.id === 'silphir' || player.rightPart.id === 'silphir' ||
+                            (player.leftPart.id === 'barie' && player.rightPart.id === 'silphir') ||
+                            (player.rightPart.id === 'barie' && player.leftPart.id === 'silphir'));
+            
+            if (gameState === "playing") {
+                if (hasSilphir) { player.silphirTimer++; } 
+                else { player.silphirTimer = 0; }
+            }
+
+            // Suro & Diana 시너지
+            let hasSuro = (player.leftPart.id === 'suro' || player.rightPart.id === 'suro');
+            let hasDiana = (player.leftPart.id === 'diana' || player.rightPart.id === 'diana');
+
+            if (hasSuro && hasDiana && gameState === "playing") {
+                player.suroTimer++;
+                if (player.suroTimer >= 600) {
+                    player.suroTimer = 0;
+                    if (player.hp > 0) {
+                        player.hp -= 1;
+                        player.totalHitCount++;
+                        createParticles(player.x + 25, player.y + 20, '#800000');
+                        updateUI();
+                        if (player.hp <= 0) { drawGameOver(); return; }
                     }
                 }
             }
+
+            try {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                if (flashTimer > 0) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${flashTimer / 20})`;
+                    ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    flashTimer--;
+                }
+                if (player.hp > 0) {
+                    updatePlayerMove();
+                    updatePlayerAction(); 
+                    updateElenaDrones(); 
+                    drawPlayer();
+                    drawElenaDrones();    
+                } else {
+                    drawGameOver();
+                    return;
+                }
+                updateNerOrbs();
+                updateBullets();
+                updateEnemies();
+                updateBoss();
+                updateExpOrbs();
+                updateParticles();
+                checkCollisions(); 
+                updateGabiaShield();
+                frame++;
+            } catch (err) { console.error(err); }
+            
+            updateElenaDrones();
+            updateNaiaDrones();
+            drawPlayer();
+            drawElenaDrones();
+            drawNaiaDrones();
+            // --- [기존 게임 로직 끝] ---
         }
-
-        try {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            if (flashTimer > 0) {
-                ctx.fillStyle = `rgba(255, 255, 255, ${flashTimer / 20})`;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                flashTimer--;
-            }
-            if (player.hp > 0) {
-                updatePlayerMove();
-                updatePlayerAction(); 
-                updateElenaDrones(); 
-                drawPlayer();
-                drawElenaDrones();    
-            } else {
-                drawGameOver();
-                return;
-            }
-            updateNerOrbs();
-            updateBullets();
-            updateEnemies();
-            updateBoss();
-            updateExpOrbs();
-            updateParticles();
-            checkCollisions(); 
-            updateGabiaShield(); // [추가됨] 매 프레임 보호막 로직 수행
-            frame++;
-        } catch (err) { console.error(err); }
-        updateElenaDrones();
-        updateNaiaDrones(); // [추가] Naia 드론 업데이트
-
-        drawPlayer();
-        drawElenaDrones();
-        drawNaiaDrones();   // [추가] Naia 드론 그리기
-        requestAnimationFrame(animate);
     }
 
     function updatePlayerAction() {
