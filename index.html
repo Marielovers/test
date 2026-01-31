@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dual Core Shooter : Modular</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="title-screen" class="overlay-screen">
+            <div class="main-title">DUAL CORE<br>STRIKER</div>
+            <p style="color:#aaa; margin-top:-20px; margin-bottom:30px; font-size:14px;">Touch & Drag to Move / Double Tap to Bomb</p>
+            <button class="start-btn" onclick="goToLoadout()">GAME START</button>
+        </div>
+
+        <div id="loadout-screen" class="overlay-screen">
+            <h2 style="color:white; margin-bottom:20px;">BUILD YOUR SHIP</h2>
+            
+            <div class="selection-slots">
+                <div id="slot-left" class="slot active" onclick="setSelectionTarget('left')">
+                    <div class="slot-label">LEFT WING</div>
+                    <div id="preview-left-icon" class="slot-icon"></div>
+                    <div id="preview-left-name" class="slot-name">SELECT</div>
+                </div>
+        
+                <div id="slot-right" class="slot" onclick="setSelectionTarget('right')">
+                    <div class="slot-label">RIGHT WING</div>
+                    <div id="preview-right-icon" class="slot-icon"></div>
+                    <div id="preview-right-name" class="slot-name">WAITING...</div>
+                </div>
+            </div>
+
+            <h3 id="selection-guide" style="color:#00f0ff; margin: 10px 0;">Choose Left Part</h3>
+
+            <div class="loadout-container">
+                <div class="part-grid" id="unified-part-grid"></div>
+            </div>
+
+            <button id="mission-start-btn" class="start-btn" style="font-size:20px; padding:10px 30px;" onclick="startGame()" disabled>START MISSION</button>
+        </div>
+
+        <div id="ui">
+            <h1>DUAL CORE STRIKER</h1>
+            <div class="bar-container">
+                <div id="hp-bar"></div>
+                <span class="bar-text" id="hp-text">HP: 100/100</span>
+            </div>
+            <div class="bar-container">
+                <div id="xp-bar"></div>
+                <span class="bar-text" id="xp-text">LV.1 (0/50)</span>
+            </div>
+            <div id="boss-ui" class="bar-container" style="border-color: #ff00ff;">
+                <div id="boss-hp-bar"></div>
+                <span class="bar-text" id="boss-hp-text">WARNING: BOSS</span>
+            </div>
+            <h3 id="scoreBoard">Score: 0</h3>
+            <p class="info-text" id="bombText">💣 BOMB: 3 (Double Tap)</p>
+        </div>
+
+        <div id="upgrade-modal" class="overlay-screen">
+            <div id="select-ui" style="display:flex; flex-direction:column; align-items:center;">
+                <div class="modal-title">LEVEL UP! (터치하여 선택)</div>
+                <div class="card-container" id="card-list"></div>
+                <div id="fixed-upgrade-container">
+                    <button class="fixed-btn" id="btn-heal" onclick="selectFixedUpgrade('heal')">❤️ HP 회복 (+20)</button>
+                    <button class="fixed-btn" id="btn-bomb" onclick="selectFixedUpgrade('bomb')">💣 폭탄 획득 (+1)</button>
+                </div>
+            </div>
+            <div id="replace-ui">
+                <div class="modal-title">교체할 위치 선택</div>
+                <div style="font-size:14px; color:#aaa; margin-bottom:20px;">*교체 시 기존 파츠 레벨 유지</div>
+                <div style="display:flex; gap:20px;">
+                    <button class="replace-btn" id="btn-replace-left">왼쪽 (LEFT)</button>
+                    <button class="replace-btn" id="btn-replace-right">오른쪽 (RIGHT)</button>
+                </div>
+                <button class="replace-btn" id="btn-replace-cancel">선택 취소 (CANCEL)</button>
+            </div>
+        </div>
+    
+        <canvas id="gameCanvas" width="450" height="700"></canvas>
+    </div>
+
+    <script src="js/data.js"></script>
+    <script src="js/game.js"></script>
+</body>
+</html>

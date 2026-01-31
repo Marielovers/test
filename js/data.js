@@ -1,0 +1,25 @@
+/* js/data.js */
+const PARTS_INFO = {
+    tig: { name: "Tig", color: "dimgray", desc: "회색 총알 2발 좌우 발사. 업그레이드: 공속 +25%", type: "normal" },
+    leets: { name: "Leets", color: "#a020f0", desc: "무적 5초 고정. 무적 시 공속 대폭 증가 (Lv.1 2배 ~ Lv.5 3배)", type: "normal" },
+    Ifrit: { name: "Ifrit", color: "#333", desc: "주변을 도는 근접탄 (최대 20개). 업글: 데미지 증가", type: "orbit" },
+    pira: { name: "Pira", color: "#ffd700", desc: "금색 총알. 경험치 획득량 대폭 증가 (최대 3배)", type: "normal" },
+    diana: { name: "Diana", color: "#8b4513", desc: "갈색 총알. 입힌 데미지 만큼 회복 ", type: "normal" },
+    elena: { name: "Elena", color: "cyan", desc: "드론 생성. 적 추적 공격 (0.5 dmg). 업글: 드론 개수 +1", type: "special" },
+    shasha: { name: "Shasha", color: "navy", desc: "남색 둥근탄 방사형 발사(45도). 업글: 탄알+1", type: "normal" },
+    silphir: { name: "Silphir", color: "lightskyblue", desc: "무작위 발사", type: "normal" },
+    lethe: { name: "Lethe", color: "gray", desc: "레이저(5초지속, 5초충전). 적탄 삭제 & 지속딜. 이속감소.", type: "laser" },
+    haley: { name: "Haley", color: "red", desc: "빨간색 총알 직선 발사. 이동속도 증가, 데미지 일정 확률 회피", type: "buff" },
+    amelia: { name: "Amelia", color: "grey", desc: "회색 총알 직선 발사. 공격력 버프 ", type: "buff" },
+    shady: { name: "Shady", color: "grey", desc: "회색 총알 직선 발사. 회피 버프 ", type: "buff" },
+    rim: { name: "Rim", color: "red", desc: "빨간 직사탄 3발. 업글: 탄수+1. 무적 시 탄수 2배", type: "normal" },
+    asana: { name: "Asana", color: "green", desc: "초록 원형탄. 최대 체력 증가 (기본 +10%, 1업당 +10%)", type: "buff" },
+    Belita: { name: "Belita", color: "#ff0000", desc: "체력 비례 데미지/크기. HP가 높을수록 강력해짐.", type: "normal" },
+    kidian: { name: "Kidian", color: "#333", desc: "검은 탄 3발. 좌우는 S자 비행. 플레이어 레벨 비례 데미지 증가 (+0.05/Lv).", type: "normal" },
+    naia: { name: "Naia", color: "royalblue", desc: "파란 직사탄. 패시브: 모든 아군 탄환에 유도 성능 부여 (레벨 비례)", type: "normal" },
+    barie: { name: "Barie", color: "purple", desc: "자주색 원형탄. 옆 파츠의 공격을 복제함", type: "special" },
+    gabia: { name: "Gabia", color: "#8B4513", desc: "갈색 원형탄(Dmg 1). 보호막 생성(Lv당 +10). 보호막 파괴 시에만 무적.", type: "defense" },
+    suro: { name: "Suro", color: "#800000", desc: "피격 횟수당 공격력 +1% (최대 +100%). Diana와 함께라면...?", type: "normal" },
+    erpin: { name: "Erpin", color: "#FFD700", desc: "무작위 산탄 발사. 10% 확률로 공격 대신 HP 회복(Ner가 있으면 20%로 마리와 놀러갑니다).", type: "special" },
+    ner: { name: "Ner", color: "#FF8C00", desc: "탄막 구체 투척. Lv에 따라 구체가 12~24발 난사. 20% 확률로 배신(적군 구체 생성), Erpin과 함께면 배신 안 함.", type: "special" }
+};
