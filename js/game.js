@@ -50,10 +50,12 @@ const player = {
     leftLaser: { active: false, timer: 0 }, rightLaser: { active: false, timer: 0 }
 };
 
-// [신규] 터치 컨트롤 관련 변수
+// [수정됨] 터치 컨트롤 관련 변수 및 이동량 누적 변수 추가
 let lastTouchX = null;
 let lastTouchY = null;
 let lastTapTime = 0;
+let touchAccX = 0; // 터치로 이동하려는 X 거리 누적
+let touchAccY = 0; // 터치로 이동하려는 Y 거리 누적
 
 let boss = null; 
 let bullets = [];
@@ -78,21 +80,24 @@ function initGame() {
     });
     document.addEventListener('keyup', e => { if(keys.hasOwnProperty(e.code)) keys[e.code]=false; });
 
-    // [핵심 로직] 터치 이벤트 등록 (조이스틱 제거, 화면 드래그 방식 적용)
+    // [수정됨] 터치 이벤트 등록
     const gameContainer = document.getElementById('game-container');
 
     gameContainer.addEventListener('touchstart', (e) => {
-        // *** [수정됨] 게임 중이 아닐 때는 기본 동작(클릭)을 막지 않음 ***
         if (gameState !== "playing") return;
 
-        e.preventDefault(); // 게임 중일 때만 스크롤 방지
+        e.preventDefault(); 
         const touch = e.changedTouches[0];
         lastTouchX = touch.clientX;
         lastTouchY = touch.clientY;
+        
+        // 터치 시작 시 기존 누적 이동량 초기화 (튀는 현상 방지)
+        touchAccX = 0;
+        touchAccY = 0;
 
         // 더블 탭 폭탄 감지
         const currentTime = Date.now();
-        if (currentTime - lastTapTime < 300) { // 300ms 이내 두 번 탭
+        if (currentTime - lastTapTime < 300) { 
             useBomb();
         }
         lastTapTime = currentTime;
@@ -100,44 +105,38 @@ function initGame() {
     }, {passive: false});
 
     gameContainer.addEventListener('touchmove', (e) => {
-        if (gameState !== "playing") return; // 게임 중이 아니면 리턴
+        if (gameState !== "playing") return;
         e.preventDefault();
 
         const touch = e.changedTouches[0];
         const dx = touch.clientX - lastTouchX;
         const dy = touch.clientY - lastTouchY;
 
-        // 캔버스와 실제 표시 크기 간의 비율 보정
-        // 화면 크기가 변해도 1:1 드래그 감각을 유지하기 위함
         const rect = canvas.getBoundingClientRect();
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
 
-        // 기체 이동 적용 (드래그한 만큼 즉시 이동)
-        player.x += dx * scaleX;
-        player.y += dy * scaleY;
-
-        // 화면 밖 제한
-        if (player.x < 0) player.x = 0;
-        if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
-        if (player.y < 0) player.y = 0;
-        if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
+        // [핵심 수정] 좌표를 직접 바꾸지 않고 이동 의도(Accumulator)만 누적
+        touchAccX += dx * scaleX;
+        touchAccY += dy * scaleY;
 
         lastTouchX = touch.clientX;
         lastTouchY = touch.clientY;
     }, {passive: false});
 
     gameContainer.addEventListener('touchend', (e) => {
-            // 게임 중일 때만 처리
-            if (gameState === "playing") {
+        if (gameState === "playing") {
             e.preventDefault();
             lastTouchX = null;
             lastTouchY = null;
-            }
+            // 손을 떼면 이동 멈춤
+            touchAccX = 0;
+            touchAccY = 0;
+        }
     });
 }
 
-// 현재 어느 쪽을 선택 중인지 추적하는 변수 ('left' 또는 'right')
+// [기존 코드 유지]
 let currentSelectionTarget = 'left';
 
 function goToLoadout() {
@@ -145,10 +144,9 @@ function goToLoadout() {
     titleScreen.style.display = "none";
     loadoutScreen.style.display = "flex";
     
-    // 초기화
     selectedLoadoutLeft = null;
     selectedLoadoutRight = null;
-    setSelectionTarget('left'); // 처음엔 왼쪽부터 선택
+    setSelectionTarget('left'); 
     renderLoadoutUI();
 }
 
@@ -252,6 +250,7 @@ function checkStartButton() {
         missionStartBtn.style.boxShadow = "none";
     }
 }
+
 function startGame() {
     gameState = "playing";
     loadoutScreen.style.display = "none";
@@ -289,6 +288,10 @@ function startGame() {
     then = Date.now();
     startTime = then;
     updatePlayerStats();
+
+    // 초기화
+    touchAccX = 0;
+    touchAccY = 0;
 
     updateUI();
     animate();
@@ -1321,10 +1324,9 @@ function checkCollisions() {
     }
 }
 
-/* js/game.js 내부의 updatePlayerMove 함수를 아래 코드로 교체 */
-
+// [핵심 수정] updatePlayerMove 완전 교체
 function updatePlayerMove() {
-    // 1. 현재 기체의 이동 속도(moveSpeed) 계산 (아이템 버프/디버프 적용)
+    // 1. 아이템에 따른 속도 보정 계산
     let speedMultiple = 1;
     if (player.leftPart.id === 'haley') speedMultiple += (player.leftPart.level * 0.1);
     else if (player.rightPart.id === 'haley') speedMultiple += (player.rightPart.level * 0.1);
@@ -1332,63 +1334,72 @@ function updatePlayerMove() {
     if (player.leftPart.id === 'lethe') speedMultiple -= (player.leftPart.level * 0.1);
     else if (player.rightPart.id === 'lethe') speedMultiple -= (player.rightPart.level * 0.1);
     
-    let moveSpeed = player.speed * speedMultiple;
+    // 최종 이동 가능 속도
+    let maxSpeed = player.speed * speedMultiple;
 
-    // 2. 키보드 입력 처리 (PC용)
-    let dx = 0;
-    let dy = 0;
-    if (keys.ArrowUp) dy -= 1;
-    if (keys.ArrowDown) dy += 1;
-    if (keys.ArrowLeft) dx -= 1;
-    if (keys.ArrowRight) dx += 1;
+    let finalDx = 0;
+    let finalDy = 0;
 
-    // 키보드 입력이 있으면 즉시 이동 적용
-    if (dx !== 0 || dy !== 0) {
-        player.x += dx * moveSpeed;
-        player.y += dy * moveSpeed;
-        // 키보드 사용 시 터치 버퍼 초기화 (충돌 방지)
-        touchBuffer = { x: 0, y: 0 };
+    // 2. 키보드 입력 처리
+    let keyDx = 0;
+    let keyDy = 0;
+    if (keys.ArrowUp) keyDy -= 1;
+    if (keys.ArrowDown) keyDy += 1;
+    if (keys.ArrowLeft) keyDx -= 1;
+    if (keys.ArrowRight) keyDx += 1;
+
+    // 대각선 이동 시 속도 정규화
+    if (keyDx !== 0 || keyDy !== 0) {
+        let len = Math.hypot(keyDx, keyDy);
+        finalDx += (keyDx / len) * maxSpeed;
+        finalDy += (keyDy / len) * maxSpeed;
     }
 
-    // 3. [핵심 수정] 터치 버퍼 이동 처리
-    // 손가락이 움직인 거리(touchBuffer)를 기체 속도(moveSpeed)에 맞춰 따라가게 함
-    if (touchBuffer.x !== 0 || touchBuffer.y !== 0) {
-        // 남은 거리 계산
-        let dist = Math.hypot(touchBuffer.x, touchBuffer.y);
-
-        // 아주 미세한 거리는 무시 (떨림 방지)
-        if (dist > 0.5) {
-            // 이번 프레임에 이동할 거리: '남은 거리'와 '기체 최대 속도' 중 작은 값 선택
-            let step = Math.min(dist, moveSpeed);
-
-            // 이동할 각도 계산
-            let angle = Math.atan2(touchBuffer.y, touchBuffer.x);
+    // 3. 터치 입력 처리 (Accumulator 방식)
+    if (touchAccX !== 0 || touchAccY !== 0) {
+        let dist = Math.hypot(touchAccX, touchAccY);
+        
+        // 이동할 거리가 있다면
+        if (dist > 0) {
+            // 이번 프레임에 이동할 거리 (남은 거리와 최대 속도 중 작은 값)
+            // 키보드 입력과 합산하지 않고 독립적으로 처리하여 maxSpeed 제한을 준수
+            let step = Math.min(dist, maxSpeed);
             
-            // 실제 이동량 계산
-            let moveX = Math.cos(angle) * step;
-            let moveY = Math.sin(angle) * step;
+            let angle = Math.atan2(touchAccY, touchAccX);
+            let moveStepX = Math.cos(angle) * step;
+            let moveStepY = Math.sin(angle) * step;
 
-            // 좌표 적용
-            player.x += moveX;
-            player.y += moveY;
+            finalDx += moveStepX;
+            finalDy += moveStepY;
 
-            // 이동한 만큼 버퍼에서 차감
-            touchBuffer.x -= moveX;
-            touchBuffer.y -= moveY;
-        } else {
-            // 목표 도달 시 버퍼 완전 초기화
-            touchBuffer.x = 0;
-            touchBuffer.y = 0;
+            // 이동한 만큼 누적량 차감
+            touchAccX -= moveStepX;
+            touchAccY -= moveStepY;
+
+            // '따라오기' 거리 제한 (너무 멀어지면 누적량 캡핑하여 딜레이 방지)
+            if (dist > 100) {
+                let factor = 100 / dist;
+                touchAccX *= factor;
+                touchAccY *= factor;
+            }
+            
+            // 미세 떨림 방지
+            if (Math.abs(touchAccX) < 0.1) touchAccX = 0;
+            if (Math.abs(touchAccY) < 0.1) touchAccY = 0;
         }
     }
 
-    // 4. 화면 밖으로 나가지 않게 제한 (Boundary Check)
-    if (player.x < 0) player.x = 0;
-    if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
-    if (player.y < 0) player.y = 0;
-    if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
+    // 4. 최종 좌표 적용 및 화면 밖 제한
+    if (finalDx !== 0 || finalDy !== 0) {
+        player.x += finalDx;
+        player.y += finalDy;
 
-    // 5. 무적 시간 감소 처리
+        if (player.x < 0) player.x = 0;
+        if (player.x > canvas.width - player.width) player.x = canvas.width - player.width;
+        if (player.y < 0) player.y = 0;
+        if (player.y > canvas.height - player.height) player.y = canvas.height - player.height;
+    }
+
     if (player.invincible) { 
         player.invincibleTimer--; 
         if (player.invincibleTimer <= 0) player.invincible = false; 
